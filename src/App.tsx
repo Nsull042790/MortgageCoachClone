@@ -8,6 +8,7 @@ import {
   ComparisonGrid,
   SavedScenariosSidebar,
   VideoWidget,
+  PaymentCharts,
 } from './components';
 
 function AppContent() {
@@ -40,6 +41,9 @@ function AppContent() {
 
             {/* Comparison Cards */}
             <ComparisonGrid />
+
+            {/* Payment Analysis Charts */}
+            <PaymentCharts />
 
             {/* Disclaimer */}
             <div className="text-center text-xs text-gray-400 pt-8 pb-4">

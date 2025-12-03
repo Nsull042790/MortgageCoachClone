@@ -7,3 +7,4 @@ export { Header } from './Header';
 export { SavedScenariosSidebar } from './SavedScenariosSidebar';
 export { VideoWidget } from './VideoWidget';
 export { PDFOptionsModal } from './PDFOptionsModal';
+export { PaymentCharts } from './PaymentCharts';
