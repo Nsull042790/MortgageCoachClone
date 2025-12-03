@@ -9,6 +9,7 @@ export function LoanInputs() {
   const { currentScenario, updateInputs } = useLoan();
   const { inputs } = currentScenario;
   const [showAdvanced, setShowAdvanced] = useState(true);
+  const [downPaymentMode, setDownPaymentMode] = useState<'$' | '%'>('$');
 
   const loanAmount = inputs.homePrice - inputs.downPayment;
   const ltv = inputs.homePrice > 0 ? (loanAmount / inputs.homePrice) * 100 : 0;
@@ -19,9 +20,29 @@ export function LoanInputs() {
     updateInputs({ [field]: value });
   };
 
+  const handleDownPaymentChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(e.target.value) || 0;
+    if (downPaymentMode === '%') {
+      // Convert percentage to dollar amount
+      const dollarAmount = (value / 100) * inputs.homePrice;
+      updateInputs({ downPayment: Math.round(dollarAmount) });
+    } else {
+      updateInputs({ downPayment: value });
+    }
+  };
+
   const handleCreditScoreChange = (e: ChangeEvent<HTMLSelectElement>) => {
     updateInputs({ creditScore: e.target.value as CreditScoreRange });
   };
+
+  const toggleDownPaymentMode = () => {
+    setDownPaymentMode(downPaymentMode === '$' ? '%' : '$');
+  };
+
+  // Get the display value based on current mode
+  const downPaymentDisplayValue = downPaymentMode === '%'
+    ? (inputs.homePrice > 0 ? downPercent.toFixed(2) : '')
+    : (inputs.downPayment || '');
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -42,13 +63,24 @@ export function LoanInputs() {
         {/* Down Payment */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Down Payment</label>
-          <input
-            type="number"
-            value={inputs.downPayment || ''}
-            onChange={handleNumberChange('downPayment')}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-            placeholder="20000"
-          />
+          <div className="flex">
+            <input
+              type="number"
+              value={downPaymentDisplayValue}
+              onChange={handleDownPaymentChange}
+              className="flex-1 px-4 py-3 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+              placeholder={downPaymentMode === '%' ? '5' : '20000'}
+              step={downPaymentMode === '%' ? '0.5' : '1000'}
+            />
+            <button
+              type="button"
+              onClick={toggleDownPaymentMode}
+              className="px-4 py-3 bg-gray-100 border border-l-0 border-gray-300 rounded-r-lg hover:bg-gray-200 text-gray-700 font-medium transition-colors min-w-[50px]"
+              title={`Switch to ${downPaymentMode === '$' ? 'percentage' : 'dollar amount'}`}
+            >
+              {downPaymentMode}
+            </button>
+          </div>
         </div>
 
         {/* Credit Score */}
