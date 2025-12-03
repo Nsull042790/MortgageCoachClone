@@ -7,21 +7,38 @@ import type { PDFOptions } from '../components/PDFOptionsModal';
 const LOGO_URL = 'https://lirp.cdn-website.com/e49062f7/dms3rep/multi/opt/Luminatebank_PrimaryLogo_Color-1920w.jpg';
 
 /**
- * Load an image from URL and convert to base64
+ * Load an image from URL using Image element and canvas (handles CORS better)
  */
 async function loadImageAsBase64(url: string): Promise<string | null> {
-  try {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+          resolve(dataUrl);
+        } else {
+          resolve(null);
+        }
+      } catch {
+        resolve(null);
+      }
+    };
+
+    img.onerror = () => {
+      resolve(null);
+    };
+
+    // Add cache-busting to avoid CORS caching issues
+    img.src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+  });
 }
 
 // Color definitions matching the app
@@ -125,8 +142,11 @@ export async function generatePDF(
   const margin = 12;
   const { inputs, calculations } = scenario;
 
-  // Load logo image
-  const logoBase64 = await loadImageAsBase64(LOGO_URL);
+  // Use logo from options (captured from page) or try to load it
+  let logoBase64 = options?.logoBase64 || null;
+  if (!logoBase64) {
+    logoBase64 = await loadImageAsBase64(LOGO_URL);
+  }
 
   // Find lowest monthly payment
   const lowestCalc = calculations.reduce((min, calc) =>

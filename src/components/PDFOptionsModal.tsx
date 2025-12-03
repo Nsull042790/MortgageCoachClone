@@ -9,6 +9,28 @@ export interface PDFOptions {
   loEmail: string;
   loCompany: string;
   loNMLS: string;
+  logoBase64?: string;
+}
+
+/**
+ * Capture logo from DOM and convert to base64
+ */
+function captureLogoFromPage(): string | null {
+  try {
+    const img = document.querySelector('header img[alt="Luminate Bank Logo"]') as HTMLImageElement;
+    if (!img || !img.complete || img.naturalWidth === 0) return null;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    ctx.drawImage(img, 0, 0);
+    return canvas.toDataURL('image/jpeg', 0.9);
+  } catch {
+    return null;
+  }
 }
 
 interface PDFOptionsModalProps {
@@ -64,7 +86,14 @@ export function PDFOptionsModal({ isOpen, onClose, onGenerate, isGenerating }: P
       loCompany: options.loCompany,
       loNMLS: options.loNMLS,
     });
-    onGenerate(options);
+
+    // Capture logo from the page
+    const logoBase64 = captureLogoFromPage();
+
+    onGenerate({
+      ...options,
+      logoBase64: logoBase64 || undefined,
+    });
   };
 
   if (!isOpen) return null;

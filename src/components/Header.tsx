@@ -86,6 +86,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
                 src="https://lirp.cdn-website.com/e49062f7/dms3rep/multi/opt/Luminatebank_PrimaryLogo_Color-1920w.jpg"
                 alt="Luminate Bank Logo"
                 className="h-10 w-auto hidden sm:block"
+                crossOrigin="anonymous"
               />
               <div>
                 {isEditingName ? (
