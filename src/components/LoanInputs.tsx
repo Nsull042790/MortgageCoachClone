@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from 'react';
+import { useState, useEffect, type ChangeEvent } from 'react';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import { useLoan } from '../context/LoanContext';
 import type { CreditScoreRange } from '../types';
@@ -10,24 +10,36 @@ export function LoanInputs() {
   const { inputs } = currentScenario;
   const [showAdvanced, setShowAdvanced] = useState(true);
   const [downPaymentMode, setDownPaymentMode] = useState<'$' | '%'>('$');
+  const [downPaymentInput, setDownPaymentInput] = useState<string>(String(inputs.downPayment || ''));
 
   const loanAmount = inputs.homePrice - inputs.downPayment;
   const ltv = inputs.homePrice > 0 ? (loanAmount / inputs.homePrice) * 100 : 0;
   const downPercent = inputs.homePrice > 0 ? (inputs.downPayment / inputs.homePrice) * 100 : 0;
+
+  // Sync local input when mode changes or external value changes
+  useEffect(() => {
+    if (downPaymentMode === '%') {
+      setDownPaymentInput(inputs.homePrice > 0 ? downPercent.toFixed(2) : '');
+    } else {
+      setDownPaymentInput(String(inputs.downPayment || ''));
+    }
+  }, [downPaymentMode, inputs.homePrice]);
 
   const handleNumberChange = (field: string) => (e: ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value) || 0;
     updateInputs({ [field]: value });
   };
 
-  const handleDownPaymentChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(e.target.value) || 0;
+  const handleDownPaymentInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setDownPaymentInput(value);
+
+    const numValue = parseFloat(value) || 0;
     if (downPaymentMode === '%') {
-      // Convert percentage to dollar amount
-      const dollarAmount = (value / 100) * inputs.homePrice;
+      const dollarAmount = (numValue / 100) * inputs.homePrice;
       updateInputs({ downPayment: Math.round(dollarAmount) });
     } else {
-      updateInputs({ downPayment: value });
+      updateInputs({ downPayment: numValue });
     }
   };
 
@@ -38,11 +50,6 @@ export function LoanInputs() {
   const toggleDownPaymentMode = () => {
     setDownPaymentMode(downPaymentMode === '$' ? '%' : '$');
   };
-
-  // Get the display value based on current mode
-  const downPaymentDisplayValue = downPaymentMode === '%'
-    ? (inputs.homePrice > 0 ? downPercent.toFixed(2) : '')
-    : (inputs.downPayment || '');
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -66,8 +73,8 @@ export function LoanInputs() {
           <div className="flex">
             <input
               type="number"
-              value={downPaymentDisplayValue}
-              onChange={handleDownPaymentChange}
+              value={downPaymentInput}
+              onChange={handleDownPaymentInputChange}
               className="flex-1 px-4 py-3 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
               placeholder={downPaymentMode === '%' ? '5' : '20000'}
               step={downPaymentMode === '%' ? '0.5' : '1000'}
