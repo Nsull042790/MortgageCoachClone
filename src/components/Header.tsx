@@ -1,21 +1,22 @@
 import { useState, type KeyboardEvent } from 'react';
-import { EnvelopeIcon, EyeIcon, DocumentArrowDownIcon, BookmarkIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { ShareIcon, DocumentArrowDownIcon, BookmarkIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { useLoan } from '../context/LoanContext';
 import { generatePDF } from '../utils/pdfGenerator';
 import { PDFOptionsModal, type PDFOptions } from './PDFOptionsModal';
+import { ShareModal } from './ShareModal';
 
 interface HeaderProps {
   onOpenSidebar: () => void;
 }
 
 export function Header({ onOpenSidebar }: HeaderProps) {
-  const { currentScenario, simulateEmailSent, simulateEmailOpened, saveCurrentScenario, updateScenarioName, createNewScenario } = useLoan();
-  const { emailTracking, name } = currentScenario;
+  const { currentScenario, saveCurrentScenario, updateScenarioName, createNewScenario } = useLoan();
+  const { name } = currentScenario;
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(name);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const [showEmailSentToast, setShowEmailSentToast] = useState(false);
   const [showPDFModal, setShowPDFModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const handleNameClick = () => {
     setTempName(name);
@@ -33,17 +34,6 @@ export function Header({ onOpenSidebar }: HeaderProps) {
     } else if (e.key === 'Escape') {
       setIsEditingName(false);
     }
-  };
-
-  const handleEmailToClient = () => {
-    simulateEmailSent();
-    setShowEmailSentToast(true);
-    setTimeout(() => setShowEmailSentToast(false), 3000);
-
-    // Simulate client opening email after 2 seconds (for demo purposes)
-    setTimeout(() => {
-      simulateEmailOpened();
-    }, 2000);
   };
 
   const handleDownloadPDF = async (options: PDFOptions) => {
@@ -146,33 +136,18 @@ export function Header({ onOpenSidebar }: HeaderProps) {
                 <span className="hidden md:inline">{isGeneratingPDF ? 'Generating...' : 'PDF'}</span>
               </button>
 
-              {/* Email Tracking */}
-              <div className="hidden lg:flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
-                <EyeIcon className="w-4 h-4 text-gray-500" />
-                <span className="text-sm text-gray-600">Email Tracking</span>
-                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
-                  {emailTracking.opened} opened
-                </span>
-              </div>
-
-              {/* Email to Client */}
+              {/* Share with Client */}
               <button
-                onClick={handleEmailToClient}
+                onClick={() => setShowShareModal(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
               >
-                <EnvelopeIcon className="w-4 h-4" />
-                <span className="hidden sm:inline">Email to Client</span>
+                <ShareIcon className="w-4 h-4" />
+                <span className="hidden sm:inline">Share</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Toast notification */}
-        {showEmailSentToast && (
-          <div className="fixed top-20 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg animate-fade-in">
-            Email sent successfully! (Demo)
-          </div>
-        )}
       </header>
 
       {/* PDF Options Modal */}
@@ -181,6 +156,12 @@ export function Header({ onOpenSidebar }: HeaderProps) {
         onClose={() => setShowPDFModal(false)}
         onGenerate={handleDownloadPDF}
         isGenerating={isGeneratingPDF}
+      />
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
       />
     </>
   );

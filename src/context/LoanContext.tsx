@@ -4,6 +4,7 @@ import type { LoanScenario, LoanInputs, LoanType, LoanCalculation, EmailTracking
 import { DEFAULT_INTEREST_RATES } from '../types';
 import { calculateAllLoans } from '../utils/mortgageCalculations';
 import { getSavedScenarios, saveScenario, deleteScenario } from '../utils/storage';
+import { getSharedScenarioFromUrl, clearSharedScenarioFromUrl } from '../utils/urlSharing';
 
 interface LoanContextType {
   // Current scenario state
@@ -70,6 +71,27 @@ export function LoanProvider({ children }: { children: ReactNode }) {
   // Load saved scenarios on mount
   useEffect(() => {
     setSavedScenarios(getSavedScenarios());
+  }, []);
+
+  // Check for shared scenario in URL on mount
+  useEffect(() => {
+    const sharedData = getSharedScenarioFromUrl();
+    if (sharedData) {
+      // Create a new scenario with the shared data
+      const sharedScenario: LoanScenario = {
+        id: uuidv4(),
+        name: sharedData.clientName ? `Scenario for ${sharedData.clientName}` : 'Shared Scenario',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        inputs: sharedData.inputs,
+        selectedLoanTypes: sharedData.selectedLoanTypes,
+        calculations: [],
+        emailTracking: { ...defaultEmailTracking },
+      };
+      setCurrentScenario(sharedScenario);
+      // Clear the URL parameter to prevent reloading on refresh
+      clearSharedScenarioFromUrl();
+    }
   }, []);
 
   // Recalculate when inputs or selected loan types change
