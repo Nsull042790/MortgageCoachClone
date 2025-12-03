@@ -5,5 +5,5 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  // base: '/MortgageCoachClone/',  // Uncomment for GitHub Pages
+  base: '/MortgageCoachClone/',  // Required for GitHub Pages
 })
