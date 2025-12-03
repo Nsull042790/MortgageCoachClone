@@ -24,10 +24,10 @@ export function VideoWidget() {
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
-  // Default Vimeo ID
-  const defaultVimeoId = 'ba635cff286966ce51cadf5a09a9cf7444304926';
-  const vimeoId = videoMessage?.vimeoId || defaultVimeoId;
+  // Vimeo ID from scenario (no default - LO must set one)
+  const vimeoId = videoMessage?.vimeoId;
   const hasRecordedVideo = videoMessage?.recordedVideoUrl || recordedUrl;
+  const hasVideo = vimeoId || hasRecordedVideo;
 
   // Cleanup stream on unmount
   useEffect(() => {
@@ -138,7 +138,6 @@ export function VideoWidget() {
   // Collapsed state - floating button
   if (mode === 'collapsed') {
     // In client view, only show if there's a video to watch
-    const hasVideo = videoMessage?.vimeoId || hasRecordedVideo;
     if (isClientView && !hasVideo) {
       return null;
     }
@@ -193,13 +192,20 @@ export function VideoWidget() {
                 autoPlay
                 className="w-full h-full object-cover"
               />
-            ) : (
+            ) : vimeoId ? (
               <iframe
                 src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&title=0&byline=0&portrait=0`}
                 className="w-full h-full"
                 allow="autoplay; fullscreen; picture-in-picture"
                 allowFullScreen
               />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-white text-center p-4">
+                <div>
+                  <p className="font-medium">No video message yet</p>
+                  <p className="text-sm text-gray-400 mt-1">Record a video to include with this scenario</p>
+                </div>
+              </div>
             )}
           </div>
 
