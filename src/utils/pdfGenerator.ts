@@ -37,7 +37,7 @@ const COLORS = {
   white: { r: 255, g: 255, b: 255 },
   lowest: { r: 34, g: 197, b: 94 },         // green-500
   blue: { r: 59, g: 130, b: 246 },          // blue-500
-  // Pie chart colors
+  // Pie chart colors - matching screenshot
   pi: { r: 59, g: 130, b: 246 },            // blue-500 - Principal & Interest
   mi: { r: 245, g: 158, b: 11 },            // amber-500 - Mortgage Insurance
   taxes: { r: 16, g: 185, b: 129 },         // emerald-500 - Property Taxes
@@ -65,11 +65,14 @@ function formatCurrencyCompact(value: number): string {
   if (value >= 1000000) {
     return '$' + (value / 1000000).toFixed(2) + 'M';
   }
+  if (value >= 1000) {
+    return '$' + (value / 1000).toFixed(1) + 'k';
+  }
   return '$' + value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
 /**
- * Draw a pie chart segment
+ * Draw a pie chart segment (donut style)
  */
 function drawPieSegment(
   pdf: jsPDF,
@@ -82,11 +85,8 @@ function drawPieSegment(
 ): void {
   pdf.setFillColor(color.r, color.g, color.b);
 
-  // Draw pie segment using lines (jsPDF doesn't have native arc fill)
   const steps = 30;
   const angleStep = (endAngle - startAngle) / steps;
-
-  // Create path points
   const points: { x: number; y: number }[] = [{ x: cx, y: cy }];
 
   for (let i = 0; i <= steps; i++) {
@@ -97,11 +97,9 @@ function drawPieSegment(
     });
   }
 
-  // Draw filled polygon
   pdf.setDrawColor(255, 255, 255);
   pdf.setLineWidth(0.5);
 
-  // Use triangle fan approach
   for (let i = 1; i < points.length - 1; i++) {
     pdf.triangle(
       points[0].x, points[0].y,
@@ -113,7 +111,7 @@ function drawPieSegment(
 }
 
 /**
- * Generate a styled PDF that matches the page layout
+ * Generate a styled PDF - single page layout matching the app
  */
 export async function generatePDF(
   _elementId: string,
@@ -124,7 +122,7 @@ export async function generatePDF(
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = 210;
   const pageHeight = 297;
-  const margin = 14;
+  const margin = 12;
   const { inputs, calculations } = scenario;
 
   // Load logo image
@@ -134,387 +132,341 @@ export async function generatePDF(
   const lowestCalc = calculations.reduce((min, calc) =>
     calc.totalMonthly < min.totalMonthly ? calc : min, calculations[0]);
 
-  // ===== HEADER WITH LOGO AND CLIENT/LO INFO =====
-  let yPos = 12;
+  // ===== HEADER =====
+  let yPos = 10;
 
   // Add logo if loaded
   if (logoBase64) {
     try {
-      pdf.addImage(logoBase64, 'JPEG', margin, yPos - 4, 40, 12);
+      pdf.addImage(logoBase64, 'JPEG', margin, yPos - 2, 35, 10);
     } catch {
       // Logo failed to load, continue without it
     }
   }
 
-    // If we have LO info, show it in top right
-    if (options?.loName || options?.loCompany) {
+  // LO info in top right
+  if (options?.loName || options?.loCompany) {
+    let loY = 10;
+    if (options.loCompany) {
       pdf.setFontSize(8);
-      pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
-
-      let loY = 12;
-      if (options.loCompany) {
-        pdf.setFontSize(9);
-        pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
-        pdf.text(options.loCompany, pageWidth - margin, loY, { align: 'right' });
-        loY += 4;
-      }
-      if (options.loName) {
-        pdf.setFontSize(8);
-        pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
-        pdf.text(`${options.loName}${options.loTitle ? ', ' + options.loTitle : ''}`, pageWidth - margin, loY, { align: 'right' });
-        loY += 4;
-      }
-      if (options.loPhone) {
-        pdf.text(options.loPhone, pageWidth - margin, loY, { align: 'right' });
-        loY += 4;
-      }
-      if (options.loEmail) {
-        pdf.text(options.loEmail, pageWidth - margin, loY, { align: 'right' });
-        loY += 4;
-      }
-      if (options.loNMLS) {
-        pdf.text(`NMLS# ${options.loNMLS}`, pageWidth - margin, loY, { align: 'right' });
-      }
+      pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
+      pdf.text(options.loCompany, pageWidth - margin, loY, { align: 'right' });
+      loY += 3.5;
     }
-
-    // Title (left aligned if we have LO info)
-    pdf.setFontSize(20);
-    pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
-    pdf.text('Loan Scenario Comparison', margin, yPos + 6);
-
-    // Client name
-    yPos += 14;
-    if (options?.clientName) {
-      pdf.setFontSize(12);
-      pdf.setTextColor(COLORS.blue.r, COLORS.blue.g, COLORS.blue.b);
-      pdf.text(`Prepared for: ${options.clientName}`, margin, yPos);
-      yPos += 6;
+    if (options.loName) {
+      pdf.setFontSize(7);
+      pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
+      pdf.text(`${options.loName}${options.loTitle ? ', ' + options.loTitle : ''}`, pageWidth - margin, loY, { align: 'right' });
+      loY += 3;
     }
+    if (options.loPhone) {
+      pdf.text(options.loPhone, pageWidth - margin, loY, { align: 'right' });
+      loY += 3;
+    }
+    if (options.loEmail) {
+      pdf.text(options.loEmail, pageWidth - margin, loY, { align: 'right' });
+    }
+  }
 
-    // Date
-    pdf.setFontSize(9);
-    pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
-    pdf.text(`Generated ${new Date().toLocaleDateString()}`, margin, yPos);
+  // Title
+  yPos += 12;
+  pdf.setFontSize(16);
+  pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
+  pdf.text('Loan Scenario Comparison', margin, yPos);
 
-    // ===== LOAN INPUTS BOX =====
-    yPos += 8;
-
-    // Background box
-    pdf.setFillColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
-    pdf.setDrawColor(COLORS.border.r, COLORS.border.g, COLORS.border.b);
-    pdf.roundedRect(margin, yPos, pageWidth - margin * 2, 24, 3, 3, 'FD');
-
-    // Input values in a row
-    const loanAmount = inputs.homePrice - inputs.downPayment;
-    const ltv = ((loanAmount / inputs.homePrice) * 100).toFixed(1);
-    const downPercent = ((inputs.downPayment / inputs.homePrice) * 100).toFixed(1);
-
-    const colWidth = (pageWidth - margin * 2) / 5;
-    const inputY = yPos + 8;
-    const valueY = yPos + 16;
-
-    const inputLabels = [
-      { label: 'Home Price', value: formatCurrency(inputs.homePrice) },
-      { label: 'Down Payment', value: `${formatCurrency(inputs.downPayment)} (${downPercent}%)` },
-      { label: 'Loan Amount', value: formatCurrency(loanAmount) },
-      { label: 'LTV', value: `${ltv}%` },
-      { label: 'Credit Score', value: inputs.creditScore },
-    ];
-
-    inputLabels.forEach((item, i) => {
-      pdf.setFontSize(7);
-      pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
-      pdf.text(item.label, margin + colWidth * (i + 0.5), inputY, { align: 'center' });
-      pdf.setFontSize(10);
-      pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
-      pdf.text(item.value, margin + colWidth * (i + 0.5), valueY, { align: 'center' });
-    });
-
-    // ===== COMPARISON CARDS =====
-    yPos += 32;
-
-    // Calculate card dimensions based on number of calculations
-    const numCards = calculations.length;
-    const cardGap = 4;
-    const totalGap = (numCards - 1) * cardGap;
-    const cardWidth = (pageWidth - margin * 2 - totalGap) / numCards;
-    const cardHeight = 155; // Increased height
-
-    calculations.forEach((calc, index) => {
-      const cardX = margin + index * (cardWidth + cardGap);
-      const color = getColorForLoanType(calc.loanType);
-      const isLowest = calc.loanType === lowestCalc.loanType;
-      const info = LOAN_TYPE_INFO[calc.loanType];
-
-      // Card background
-      pdf.setFillColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
-      pdf.setDrawColor(COLORS.border.r, COLORS.border.g, COLORS.border.b);
-      pdf.roundedRect(cardX, yPos, cardWidth, cardHeight, 2, 2, 'FD');
-
-      // Colored header
-      pdf.setFillColor(color.r, color.g, color.b);
-      pdf.roundedRect(cardX, yPos, cardWidth, 14, 2, 2, 'F');
-      pdf.rect(cardX, yPos + 8, cardWidth, 6, 'F'); // Cover bottom corners
-
-      // Loan type name
-      pdf.setFontSize(9);
-      pdf.setTextColor(255, 255, 255);
-      pdf.text(info.shortName, cardX + cardWidth / 2, yPos + 9, { align: 'center' });
-
-      // Interest rate
-      let cardY = yPos + 22;
-      pdf.setFontSize(7);
-      pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
-      pdf.text('Interest Rate', cardX + cardWidth / 2, cardY, { align: 'center' });
-      cardY += 5;
-      pdf.setFontSize(12);
-      pdf.setTextColor(color.r, color.g, color.b);
-      pdf.text(`${calc.interestRate.toFixed(3)}%`, cardX + cardWidth / 2, cardY, { align: 'center' });
-
-      // Total Monthly (highlighted)
-      cardY += 9;
-      if (isLowest) {
-        pdf.setFillColor(220, 252, 231); // green-100
-        pdf.roundedRect(cardX + 2, cardY - 4, cardWidth - 4, 14, 1, 1, 'F');
-      }
-      pdf.setFontSize(7);
-      pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
-      pdf.text('Total Monthly', cardX + cardWidth / 2, cardY, { align: 'center' });
-      cardY += 5;
-      pdf.setFontSize(13);
-      if (isLowest) {
-        pdf.setTextColor(COLORS.lowest.r, COLORS.lowest.g, COLORS.lowest.b);
-      } else {
-        pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
-      }
-      pdf.text(formatCurrencyDecimal(calc.totalMonthly), cardX + cardWidth / 2, cardY, { align: 'center' });
-
-      // Divider
-      cardY += 7;
-      pdf.setDrawColor(COLORS.border.r, COLORS.border.g, COLORS.border.b);
-      pdf.line(cardX + 3, cardY, cardX + cardWidth - 3, cardY);
-
-      // Breakdown items
-      cardY += 5;
-      const items = [
-        { label: 'Principal & Interest', value: calc.monthlyPI },
-        { label: 'Mortgage Insurance', value: calc.monthlyMI },
-        { label: 'Property Taxes', value: calc.monthlyTaxes },
-        { label: 'Home Insurance', value: calc.monthlyInsurance },
-      ];
-
-      pdf.setFontSize(6.5);
-      items.forEach((item) => {
-        pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
-        pdf.text(item.label, cardX + 3, cardY);
-        pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
-        pdf.text(formatCurrencyDecimal(item.value), cardX + cardWidth - 3, cardY, { align: 'right' });
-        cardY += 5;
-      });
-
-      // Divider
-      cardY += 2;
-      pdf.line(cardX + 3, cardY, cardX + cardWidth - 3, cardY);
-      cardY += 5;
-
-      // Cash to Close
-      pdf.setFontSize(6.5);
-      pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
-      pdf.text('Cash to Close', cardX + 3, cardY);
-      pdf.setFontSize(8);
-      pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
-      pdf.text(formatCurrency(calc.cashToClose), cardX + cardWidth - 3, cardY, { align: 'right' });
-
-      // Total Cost
-      cardY += 6;
-      pdf.setFontSize(6.5);
-      pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
-      pdf.text('Total Cost', cardX + 3, cardY);
-      pdf.setFontSize(8);
-      pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
-      pdf.text(formatCurrencyCompact(calc.totalCost), cardX + cardWidth - 3, cardY, { align: 'right' });
-
-      // Lowest badge
-      if (isLowest) {
-        cardY += 10;
-        pdf.setFillColor(COLORS.lowest.r, COLORS.lowest.g, COLORS.lowest.b);
-        const badgeWidth = Math.min(32, cardWidth - 8);
-        pdf.roundedRect(cardX + (cardWidth - badgeWidth) / 2, cardY - 3, badgeWidth, 8, 2, 2, 'F');
-        pdf.setFontSize(6);
-        pdf.setTextColor(255, 255, 255);
-        pdf.text('LOWEST', cardX + cardWidth / 2, cardY + 2, { align: 'center' });
-      }
-    });
-
-    // ===== PAGE 2: PAYMENT ANALYSIS CHARTS =====
-    pdf.addPage();
-    yPos = 20;
-
-    // Section title
-    pdf.setFontSize(16);
-    pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
-    pdf.text('Payment Analysis', margin, yPos);
-    yPos += 12;
-
-    // ===== BAR CHART - Monthly Payment Comparison =====
-    const barChartX = margin;
-    const barChartY = yPos;
-    const barChartWidth = (pageWidth - margin * 3) / 2;
-    const barChartHeight = 80;
-
-    // Chart background
-    pdf.setFillColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
-    pdf.setDrawColor(COLORS.border.r, COLORS.border.g, COLORS.border.b);
-    pdf.roundedRect(barChartX, barChartY, barChartWidth, barChartHeight + 20, 3, 3, 'FD');
-
-    // Chart title
+  // Client name and date
+  if (options?.clientName) {
+    yPos += 5;
     pdf.setFontSize(10);
-    pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
-    pdf.text('Monthly Payment Comparison', barChartX + barChartWidth / 2, barChartY + 8, { align: 'center' });
+    pdf.setTextColor(COLORS.blue.r, COLORS.blue.g, COLORS.blue.b);
+    pdf.text(`Prepared for: ${options.clientName}`, margin, yPos);
+  }
 
-    // Find max payment for scale
-    const maxPayment = Math.max(...calculations.map(c => c.totalMonthly));
-    const minPayment = Math.min(...calculations.map(c => c.totalMonthly));
+  yPos += 4;
+  pdf.setFontSize(8);
+  pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
+  pdf.text(`Generated ${new Date().toLocaleDateString()}`, margin, yPos);
 
-    // Draw bars
-    const barAreaX = barChartX + 15;
-    const barAreaY = barChartY + 18;
-    const barAreaWidth = barChartWidth - 30;
-    const barAreaHeight = barChartHeight - 10;
-    const barWidth = barAreaWidth / calculations.length - 8;
+  // ===== LOAN INPUTS BOX =====
+  yPos += 6;
+  const inputBoxHeight = 18;
 
-    // Y-axis labels
+  pdf.setFillColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
+  pdf.setDrawColor(COLORS.border.r, COLORS.border.g, COLORS.border.b);
+  pdf.roundedRect(margin, yPos, pageWidth - margin * 2, inputBoxHeight, 2, 2, 'FD');
+
+  const loanAmount = inputs.homePrice - inputs.downPayment;
+  const ltv = ((loanAmount / inputs.homePrice) * 100).toFixed(1);
+  const downPercent = ((inputs.downPayment / inputs.homePrice) * 100).toFixed(1);
+
+  const colWidth = (pageWidth - margin * 2) / 5;
+  const inputY = yPos + 6;
+  const valueY = yPos + 12;
+
+  const inputLabels = [
+    { label: 'Home Price', value: formatCurrency(inputs.homePrice) },
+    { label: 'Down Payment', value: `${formatCurrency(inputs.downPayment)} (${downPercent}%)` },
+    { label: 'Loan Amount', value: formatCurrency(loanAmount) },
+    { label: 'LTV', value: `${ltv}%` },
+    { label: 'Credit Score', value: inputs.creditScore },
+  ];
+
+  inputLabels.forEach((item, i) => {
     pdf.setFontSize(6);
     pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
-    pdf.text(formatCurrency(maxPayment), barChartX + 12, barAreaY + 2, { align: 'right' });
-    pdf.text(formatCurrency(Math.round(maxPayment / 2)), barChartX + 12, barAreaY + barAreaHeight / 2, { align: 'right' });
-    pdf.text('$0', barChartX + 12, barAreaY + barAreaHeight, { align: 'right' });
-
-    // Grid lines
-    pdf.setDrawColor(COLORS.border.r, COLORS.border.g, COLORS.border.b);
-    pdf.setLineWidth(0.2);
-    pdf.line(barAreaX, barAreaY, barAreaX + barAreaWidth, barAreaY);
-    pdf.line(barAreaX, barAreaY + barAreaHeight / 2, barAreaX + barAreaWidth, barAreaY + barAreaHeight / 2);
-    pdf.line(barAreaX, barAreaY + barAreaHeight, barAreaX + barAreaWidth, barAreaY + barAreaHeight);
-
-    calculations.forEach((calc, index) => {
-      const barX = barAreaX + index * (barWidth + 8) + 4;
-      const barHeight = (calc.totalMonthly / maxPayment) * (barAreaHeight - 5);
-      const barY = barAreaY + barAreaHeight - barHeight;
-      const color = calc.totalMonthly === minPayment ? COLORS.lowest : getColorForLoanType(calc.loanType);
-
-      // Draw bar
-      pdf.setFillColor(color.r, color.g, color.b);
-      pdf.roundedRect(barX, barY, barWidth, barHeight, 1, 1, 'F');
-
-      // Value on top of bar
-      pdf.setFontSize(6);
-      pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
-      pdf.text(formatCurrency(calc.totalMonthly), barX + barWidth / 2, barY - 2, { align: 'center' });
-
-      // Label below
-      pdf.setFontSize(6);
-      pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
-      const shortName = LOAN_TYPE_INFO[calc.loanType].shortName.replace(' ', '\n');
-      pdf.text(shortName, barX + barWidth / 2, barAreaY + barAreaHeight + 4, { align: 'center' });
-    });
-
-    // Legend for lowest
-    pdf.setFillColor(COLORS.lowest.r, COLORS.lowest.g, COLORS.lowest.b);
-    pdf.rect(barChartX + 8, barChartY + barChartHeight + 12, 4, 4, 'F');
-    pdf.setFontSize(6);
-    pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
-    pdf.text('Lowest Monthly Payment', barChartX + 14, barChartY + barChartHeight + 15);
-
-    // ===== PIE CHART - Payment Breakdown for Lowest =====
-    const pieChartX = margin + barChartWidth + margin;
-    const pieChartY = yPos;
-    const pieChartWidth = barChartWidth;
-    const pieChartHeight = barChartHeight + 20;
-
-    // Chart background
-    pdf.setFillColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
-    pdf.setDrawColor(COLORS.border.r, COLORS.border.g, COLORS.border.b);
-    pdf.roundedRect(pieChartX, pieChartY, pieChartWidth, pieChartHeight, 3, 3, 'FD');
-
-    // Chart title
-    pdf.setFontSize(10);
-    pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
-    pdf.text(`Payment Breakdown - ${LOAN_TYPE_INFO[lowestCalc.loanType].shortName}`, pieChartX + pieChartWidth / 2, pieChartY + 8, { align: 'center' });
-
-    // Prepare pie data
-    const pieData = [
-      { label: 'P&I', value: lowestCalc.monthlyPI, color: COLORS.pi },
-      { label: 'MI', value: lowestCalc.monthlyMI, color: COLORS.mi },
-      { label: 'Taxes', value: lowestCalc.monthlyTaxes, color: COLORS.taxes },
-      { label: 'Insurance', value: lowestCalc.monthlyInsurance, color: COLORS.insurance },
-      { label: 'HOA', value: lowestCalc.monthlyHOA, color: COLORS.hoa },
-    ].filter(item => item.value > 0);
-
-    const pieTotal = pieData.reduce((sum, item) => sum + item.value, 0);
-    const pieCenterX = pieChartX + pieChartWidth / 3;
-    const pieCenterY = pieChartY + pieChartHeight / 2 + 5;
-    const pieRadius = 28;
-
-    // Draw pie segments
-    let currentAngle = -Math.PI / 2; // Start from top
-
-    pieData.forEach((item) => {
-      const sliceAngle = (item.value / pieTotal) * 2 * Math.PI;
-      drawPieSegment(pdf, pieCenterX, pieCenterY, pieRadius, currentAngle, currentAngle + sliceAngle, item.color);
-      currentAngle += sliceAngle;
-    });
-
-    // Draw white center (donut effect)
-    pdf.setFillColor(255, 255, 255);
-    pdf.circle(pieCenterX, pieCenterY, pieRadius * 0.5, 'F');
-
-    // Total in center
+    pdf.text(item.label, margin + colWidth * (i + 0.5), inputY, { align: 'center' });
     pdf.setFontSize(8);
     pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
-    pdf.text(formatCurrency(pieTotal), pieCenterX, pieCenterY - 1, { align: 'center' });
-    pdf.setFontSize(5);
+    pdf.text(item.value, margin + colWidth * (i + 0.5), valueY, { align: 'center' });
+  });
+
+  // ===== COMPARISON CARDS (compact) =====
+  yPos += inputBoxHeight + 6;
+
+  const numCards = calculations.length;
+  const cardGap = 3;
+  const totalGap = (numCards - 1) * cardGap;
+  const cardWidth = (pageWidth - margin * 2 - totalGap) / numCards;
+  const cardHeight = 85; // Compact height
+
+  calculations.forEach((calc, index) => {
+    const cardX = margin + index * (cardWidth + cardGap);
+    const color = getColorForLoanType(calc.loanType);
+    const isLowest = calc.loanType === lowestCalc.loanType;
+    const info = LOAN_TYPE_INFO[calc.loanType];
+
+    // Card background
+    pdf.setFillColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
+    pdf.setDrawColor(COLORS.border.r, COLORS.border.g, COLORS.border.b);
+    pdf.roundedRect(cardX, yPos, cardWidth, cardHeight, 2, 2, 'FD');
+
+    // Colored header
+    pdf.setFillColor(color.r, color.g, color.b);
+    pdf.roundedRect(cardX, yPos, cardWidth, 10, 2, 2, 'F');
+    pdf.rect(cardX, yPos + 6, cardWidth, 4, 'F');
+
+    // Loan type name
+    pdf.setFontSize(8);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text(info.shortName, cardX + cardWidth / 2, yPos + 7, { align: 'center' });
+
+    // Interest rate
+    let cardY = yPos + 16;
+    pdf.setFontSize(6);
     pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
-    pdf.text('/month', pieCenterX, pieCenterY + 3, { align: 'center' });
+    pdf.text('Interest Rate', cardX + cardWidth / 2, cardY, { align: 'center' });
+    cardY += 4;
+    pdf.setFontSize(10);
+    pdf.setTextColor(color.r, color.g, color.b);
+    pdf.text(`${calc.interestRate.toFixed(3)}%`, cardX + cardWidth / 2, cardY, { align: 'center' });
 
-    // Legend on the right side of pie
-    const legendX = pieChartX + pieChartWidth / 2 + 10;
-    let legendY = pieChartY + 20;
+    // Total Monthly
+    cardY += 6;
+    if (isLowest) {
+      pdf.setFillColor(220, 252, 231);
+      pdf.roundedRect(cardX + 2, cardY - 3, cardWidth - 4, 10, 1, 1, 'F');
+    }
+    pdf.setFontSize(6);
+    pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
+    pdf.text('Total Monthly', cardX + cardWidth / 2, cardY, { align: 'center' });
+    cardY += 4;
+    pdf.setFontSize(11);
+    pdf.setTextColor(isLowest ? COLORS.lowest.r : COLORS.text.r, isLowest ? COLORS.lowest.g : COLORS.text.g, isLowest ? COLORS.lowest.b : COLORS.text.b);
+    pdf.text(formatCurrencyDecimal(calc.totalMonthly), cardX + cardWidth / 2, cardY, { align: 'center' });
 
-    pieData.forEach((item) => {
-      const percent = ((item.value / pieTotal) * 100).toFixed(0);
+    // Divider
+    cardY += 5;
+    pdf.setDrawColor(COLORS.border.r, COLORS.border.g, COLORS.border.b);
+    pdf.line(cardX + 2, cardY, cardX + cardWidth - 2, cardY);
 
-      // Color box
-      pdf.setFillColor(item.color.r, item.color.g, item.color.b);
-      pdf.rect(legendX, legendY - 2.5, 4, 4, 'F');
+    // Breakdown (compact)
+    cardY += 4;
+    pdf.setFontSize(5.5);
+    const items = [
+      { label: 'P&I', value: calc.monthlyPI },
+      { label: 'MI', value: calc.monthlyMI },
+      { label: 'Taxes', value: calc.monthlyTaxes },
+      { label: 'Insurance', value: calc.monthlyInsurance },
+    ];
 
-      // Label and value
-      pdf.setFontSize(7);
-      pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
-      pdf.text(item.label, legendX + 6, legendY);
-
-      pdf.setFontSize(6);
+    items.forEach((item) => {
       pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
-      pdf.text(`${formatCurrency(item.value)} (${percent}%)`, legendX + 6, legendY + 4);
-
-      legendY += 12;
+      pdf.text(item.label, cardX + 2, cardY);
+      pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
+      pdf.text(formatCurrency(item.value), cardX + cardWidth - 2, cardY, { align: 'right' });
+      cardY += 3.5;
     });
 
-    // ===== FOOTER =====
-    pdf.setFontSize(7);
+    // Cash to Close
+    cardY += 1;
     pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
-    pdf.text(
-      'This calculator provides estimates only. Actual rates, terms, and costs may vary.',
-      pageWidth / 2,
-      pageHeight - 12,
-      { align: 'center' }
-    );
-    pdf.text(
-      'Contact your loan officer for accurate quotes and eligibility requirements.',
-      pageWidth / 2,
-      pageHeight - 8,
-      { align: 'center' }
-    );
+    pdf.text('Cash to Close', cardX + 2, cardY);
+    pdf.setFontSize(6);
+    pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
+    pdf.text(formatCurrency(calc.cashToClose), cardX + cardWidth - 2, cardY, { align: 'right' });
+
+    // Lowest badge
+    if (isLowest) {
+      cardY += 5;
+      pdf.setFillColor(COLORS.lowest.r, COLORS.lowest.g, COLORS.lowest.b);
+      const badgeWidth = Math.min(24, cardWidth - 6);
+      pdf.roundedRect(cardX + (cardWidth - badgeWidth) / 2, cardY - 2, badgeWidth, 6, 1, 1, 'F');
+      pdf.setFontSize(5);
+      pdf.setTextColor(255, 255, 255);
+      pdf.text('LOWEST', cardX + cardWidth / 2, cardY + 2, { align: 'center' });
+    }
+  });
+
+  // ===== PAYMENT ANALYSIS SECTION =====
+  yPos += cardHeight + 8;
+
+  // Section container
+  const chartSectionHeight = 75;
+  pdf.setFillColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
+  pdf.setDrawColor(COLORS.border.r, COLORS.border.g, COLORS.border.b);
+  pdf.roundedRect(margin, yPos, pageWidth - margin * 2, chartSectionHeight, 3, 3, 'FD');
+
+  // Section title
+  pdf.setFontSize(11);
+  pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
+  pdf.text('Payment Analysis', margin + 6, yPos + 8);
+
+  const chartAreaY = yPos + 14;
+  const chartAreaHeight = chartSectionHeight - 18;
+  const halfWidth = (pageWidth - margin * 2) / 2;
+
+  // ===== BAR CHART =====
+  const barChartX = margin + 6;
+
+  pdf.setFontSize(8);
+  pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
+  pdf.text('Monthly Payment Comparison', barChartX, chartAreaY);
+
+  const maxPayment = Math.max(...calculations.map(c => c.totalMonthly));
+  const minPayment = Math.min(...calculations.map(c => c.totalMonthly));
+
+  const barAreaX = barChartX + 12;
+  const barAreaY = chartAreaY + 6;
+  const barAreaWidth = halfWidth - 30;
+  const barAreaHeight = chartAreaHeight - 16;
+  const barWidth = Math.min(18, (barAreaWidth / calculations.length) - 4);
+
+  // Y-axis labels
+  pdf.setFontSize(5);
+  pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
+  pdf.text(formatCurrencyCompact(maxPayment), barChartX + 10, barAreaY + 2, { align: 'right' });
+  pdf.text(formatCurrencyCompact(maxPayment / 2), barChartX + 10, barAreaY + barAreaHeight / 2, { align: 'right' });
+  pdf.text('$0.0k', barChartX + 10, barAreaY + barAreaHeight, { align: 'right' });
+
+  // Grid lines (dashed style)
+  pdf.setDrawColor(COLORS.border.r, COLORS.border.g, COLORS.border.b);
+  pdf.setLineWidth(0.1);
+  pdf.setLineDashPattern([1, 1], 0);
+  pdf.line(barAreaX, barAreaY, barAreaX + barAreaWidth, barAreaY);
+  pdf.line(barAreaX, barAreaY + barAreaHeight / 2, barAreaX + barAreaWidth, barAreaY + barAreaHeight / 2);
+  pdf.line(barAreaX, barAreaY + barAreaHeight, barAreaX + barAreaWidth, barAreaY + barAreaHeight);
+  pdf.setLineDashPattern([], 0);
+
+  // Draw bars
+  calculations.forEach((calc, index) => {
+    const barX = barAreaX + index * (barWidth + 4) + 2;
+    const barHeight = (calc.totalMonthly / maxPayment) * (barAreaHeight - 4);
+    const barY = barAreaY + barAreaHeight - barHeight;
+    const color = calc.totalMonthly === minPayment ? COLORS.lowest : getColorForLoanType(calc.loanType);
+
+    pdf.setFillColor(color.r, color.g, color.b);
+    pdf.roundedRect(barX, barY, barWidth, barHeight, 1, 1, 'F');
+
+    // Label below
+    pdf.setFontSize(5);
+    pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
+    const shortName = LOAN_TYPE_INFO[calc.loanType].shortName;
+    pdf.text(shortName, barX + barWidth / 2, barAreaY + barAreaHeight + 4, { align: 'center' });
+  });
+
+  // Legend
+  pdf.setFillColor(COLORS.lowest.r, COLORS.lowest.g, COLORS.lowest.b);
+  pdf.circle(barChartX + 4, yPos + chartSectionHeight - 6, 1.5, 'F');
+  pdf.setFontSize(5);
+  pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
+  pdf.text('Lowest monthly payment', barChartX + 8, yPos + chartSectionHeight - 5);
+
+  // ===== PIE CHART =====
+  const pieChartX = margin + halfWidth + 6;
+
+  pdf.setFontSize(8);
+  pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
+  pdf.text('Payment Breakdown', pieChartX, chartAreaY);
+
+  // Loan type indicator (like dropdown in screenshot)
+  const dropdownX = pageWidth - margin - 25;
+  pdf.setFillColor(COLORS.background.r, COLORS.background.g, COLORS.background.b);
+  pdf.setDrawColor(COLORS.border.r, COLORS.border.g, COLORS.border.b);
+  pdf.roundedRect(dropdownX, chartAreaY - 4, 22, 6, 1, 1, 'FD');
+  pdf.setFontSize(5);
+  pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
+  pdf.text(LOAN_TYPE_INFO[lowestCalc.loanType].shortName, dropdownX + 11, chartAreaY - 0.5, { align: 'center' });
+
+  // Prepare pie data
+  const pieData = [
+    { label: 'Home Insurance', value: lowestCalc.monthlyInsurance, color: COLORS.insurance },
+    { label: 'Mortgage Insurance', value: lowestCalc.monthlyMI, color: COLORS.mi },
+    { label: 'Principal & Interest', value: lowestCalc.monthlyPI, color: COLORS.pi },
+    { label: 'Property Taxes', value: lowestCalc.monthlyTaxes, color: COLORS.taxes },
+  ].filter(item => item.value > 0);
+
+  const pieTotal = pieData.reduce((sum, item) => sum + item.value, 0);
+  const pieCenterX = pieChartX + 22;
+  const pieCenterY = chartAreaY + chartAreaHeight / 2 + 2;
+  const pieRadius = 18;
+
+  // Draw pie segments
+  let currentAngle = -Math.PI / 2;
+  pieData.forEach((item) => {
+    const sliceAngle = (item.value / pieTotal) * 2 * Math.PI;
+    drawPieSegment(pdf, pieCenterX, pieCenterY, pieRadius, currentAngle, currentAngle + sliceAngle, item.color);
+    currentAngle += sliceAngle;
+  });
+
+  // Donut hole
+  pdf.setFillColor(255, 255, 255);
+  pdf.circle(pieCenterX, pieCenterY, pieRadius * 0.55, 'F');
+
+  // Legend on right side
+  const legendX = pieChartX + 48;
+  let legendY = chartAreaY + 8;
+
+  pieData.forEach((item) => {
+    pdf.setFillColor(item.color.r, item.color.g, item.color.b);
+    pdf.circle(legendX, legendY, 1.5, 'F');
+
+    pdf.setFontSize(6);
+    pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
+    pdf.text(`${item.label}: ${formatCurrency(item.value)}`, legendX + 4, legendY + 1);
+    legendY += 6;
+  });
+
+  // Total in center area
+  const totalY = pieCenterY + pieRadius + 8;
+  pdf.setFontSize(12);
+  pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
+  pdf.text(formatCurrency(pieTotal), pieCenterX, totalY, { align: 'center' });
+  pdf.setFontSize(6);
+  pdf.text('/mo', pieCenterX + 14, totalY);
+
+  pdf.setFontSize(6);
+  pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
+  pdf.text(LOAN_TYPE_INFO[lowestCalc.loanType].name, pieCenterX, totalY + 4, { align: 'center' });
+
+  // ===== FOOTER =====
+  pdf.setFontSize(6);
+  pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
+  pdf.text(
+    'This calculator provides estimates only. Actual rates, terms, and costs may vary. Contact your loan officer for accurate quotes.',
+    pageWidth / 2,
+    pageHeight - 8,
+    { align: 'center' }
+  );
 
   // Save the PDF
   const clientSlug = options?.clientName ? options.clientName.replace(/\s+/g, '-').toLowerCase() + '-' : '';
