@@ -11,6 +11,10 @@ interface LoanContextType {
   currentScenario: LoanScenario;
   calculations: LoanCalculation[];
 
+  // Client view mode (when opened from shared URL)
+  isClientView: boolean;
+  clientName: string | null;
+
   // Input handlers
   updateInputs: (updates: Partial<LoanInputs>) => void;
   updateInterestRate: (loanType: LoanType, rate: number) => void;
@@ -67,6 +71,8 @@ export function LoanProvider({ children }: { children: ReactNode }) {
   const [currentScenario, setCurrentScenario] = useState<LoanScenario>(createDefaultScenario);
   const [savedScenarios, setSavedScenarios] = useState<LoanScenario[]>([]);
   const [calculations, setCalculations] = useState<LoanCalculation[]>([]);
+  const [isClientView, setIsClientView] = useState(false);
+  const [clientName, setClientName] = useState<string | null>(null);
 
   // Load saved scenarios on mount
   useEffect(() => {
@@ -80,7 +86,7 @@ export function LoanProvider({ children }: { children: ReactNode }) {
       // Create a new scenario with the shared data
       const sharedScenario: LoanScenario = {
         id: uuidv4(),
-        name: sharedData.clientName ? `Scenario for ${sharedData.clientName}` : 'Shared Scenario',
+        name: sharedData.clientName ? `Scenario for ${sharedData.clientName}` : 'Your Loan Comparison',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         inputs: sharedData.inputs,
@@ -89,7 +95,9 @@ export function LoanProvider({ children }: { children: ReactNode }) {
         emailTracking: { ...defaultEmailTracking },
       };
       setCurrentScenario(sharedScenario);
-      // Clear the URL parameter to prevent reloading on refresh
+      setIsClientView(true);
+      setClientName(sharedData.clientName || null);
+      // Clear the URL parameter but keep client view active
       clearSharedScenarioFromUrl();
     }
   }, []);
@@ -222,6 +230,8 @@ export function LoanProvider({ children }: { children: ReactNode }) {
   const value: LoanContextType = {
     currentScenario,
     calculations,
+    isClientView,
+    clientName,
     updateInputs,
     updateInterestRate,
     toggleLoanType,

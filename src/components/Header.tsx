@@ -10,7 +10,7 @@ interface HeaderProps {
 }
 
 export function Header({ onOpenSidebar }: HeaderProps) {
-  const { currentScenario, saveCurrentScenario, updateScenarioName, createNewScenario } = useLoan();
+  const { currentScenario, saveCurrentScenario, updateScenarioName, createNewScenario, isClientView, clientName } = useLoan();
   const { name } = currentScenario;
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(name);
@@ -65,13 +65,15 @@ export function Header({ onOpenSidebar }: HeaderProps) {
           <div className="flex items-center justify-between h-16">
             {/* Left side - Logo & Title */}
             <div className="flex items-center gap-4">
-              <button
-                onClick={onOpenSidebar}
-                className="p-2 rounded-lg hover:bg-gray-100 lg:hidden"
-                title="View saved scenarios"
-              >
-                <BookmarkIcon className="w-5 h-5 text-gray-600" />
-              </button>
+              {!isClientView && (
+                <button
+                  onClick={onOpenSidebar}
+                  className="p-2 rounded-lg hover:bg-gray-100 lg:hidden"
+                  title="View saved scenarios"
+                >
+                  <BookmarkIcon className="w-5 h-5 text-gray-600" />
+                </button>
+              )}
               <img
                 src="https://lirp.cdn-website.com/e49062f7/dms3rep/multi/opt/Luminatebank_PrimaryLogo_Color-1920w.jpg"
                 alt="Luminate Bank Logo"
@@ -79,7 +81,11 @@ export function Header({ onOpenSidebar }: HeaderProps) {
                 crossOrigin="anonymous"
               />
               <div>
-                {isEditingName ? (
+                {isClientView ? (
+                  <h1 className="text-xl font-bold text-gray-900">
+                    {clientName ? `Loan Options for ${clientName}` : 'Your Loan Comparison'}
+                  </h1>
+                ) : isEditingName ? (
                   <input
                     type="text"
                     value={tempName}
@@ -98,52 +104,64 @@ export function Header({ onOpenSidebar }: HeaderProps) {
                     Loan Scenario Comparison
                   </h1>
                 )}
-                <p className="text-sm text-gray-500">Compare up to 4 loan products side-by-side</p>
+                <p className="text-sm text-gray-500">
+                  {isClientView ? 'Prepared specially for you' : 'Compare up to 4 loan products side-by-side'}
+                </p>
               </div>
             </div>
 
             {/* Right side - Actions */}
             <div className="flex items-center gap-3">
-              {/* New Scenario */}
-              <button
-                onClick={createNewScenario}
-                className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                title="Create new scenario"
-              >
-                <PlusIcon className="w-4 h-4" />
-                <span className="hidden md:inline">New</span>
-              </button>
+              {!isClientView && (
+                <>
+                  {/* New Scenario */}
+                  <button
+                    onClick={createNewScenario}
+                    className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="Create new scenario"
+                  >
+                    <PlusIcon className="w-4 h-4" />
+                    <span className="hidden md:inline">New</span>
+                  </button>
 
-              {/* Save */}
-              <button
-                id="save-btn"
-                onClick={handleSave}
-                className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                title="Save scenario"
-              >
-                <BookmarkIcon className="w-4 h-4" />
-                <span className="hidden md:inline">Save</span>
-              </button>
+                  {/* Save */}
+                  <button
+                    id="save-btn"
+                    onClick={handleSave}
+                    className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="Save scenario"
+                  >
+                    <BookmarkIcon className="w-4 h-4" />
+                    <span className="hidden md:inline">Save</span>
+                  </button>
+                </>
+              )}
 
               {/* Download PDF */}
               <button
                 onClick={() => setShowPDFModal(true)}
                 disabled={isGeneratingPDF}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 ${
+                  isClientView
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
                 title="Download PDF"
               >
                 <DocumentArrowDownIcon className="w-4 h-4" />
-                <span className="hidden md:inline">{isGeneratingPDF ? 'Generating...' : 'PDF'}</span>
+                <span className="hidden md:inline">{isGeneratingPDF ? 'Generating...' : 'Download PDF'}</span>
               </button>
 
-              {/* Share with Client */}
-              <button
-                onClick={() => setShowShareModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-              >
-                <ShareIcon className="w-4 h-4" />
-                <span className="hidden sm:inline">Share</span>
-              </button>
+              {!isClientView && (
+                /* Share with Client */
+                <button
+                  onClick={() => setShowShareModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                >
+                  <ShareIcon className="w-4 h-4" />
+                  <span className="hidden sm:inline">Share</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

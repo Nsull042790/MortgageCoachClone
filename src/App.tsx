@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LoanProvider } from './context/LoanContext';
+import { LoanProvider, useLoan } from './context/LoanContext';
 import {
   Header,
   LoanInputs,
@@ -13,14 +13,17 @@ import {
 
 function AppContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { isClientView } = useLoan();
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
-      <SavedScenariosSidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+      {/* Sidebar - hidden in client view */}
+      {!isClientView && (
+        <SavedScenariosSidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
+      )}
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
@@ -28,16 +31,18 @@ function AppContent() {
 
         <main className="flex-1 overflow-auto">
           <div id="pdf-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-            {/* Loan Inputs */}
+            {/* Loan Inputs - read-only display in client view */}
             <LoanInputs />
 
-            {/* Interest Rates */}
-            <InterestRates />
+            {/* Interest Rates - hidden in client view */}
+            {!isClientView && <InterestRates />}
 
-            {/* Loan Type Selector */}
-            <div className="py-4">
-              <LoanTypeSelector />
-            </div>
+            {/* Loan Type Selector - hidden in client view */}
+            {!isClientView && (
+              <div className="py-4">
+                <LoanTypeSelector />
+              </div>
+            )}
 
             {/* Comparison Cards */}
             <ComparisonGrid />
@@ -56,8 +61,8 @@ function AppContent() {
         </main>
       </div>
 
-      {/* Video Widget */}
-      <VideoWidget />
+      {/* Video Widget - hidden in client view */}
+      {!isClientView && <VideoWidget />}
     </div>
   );
 }
