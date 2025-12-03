@@ -73,7 +73,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Left side - Title */}
+            {/* Left side - Logo & Title */}
             <div className="flex items-center gap-4">
               <button
                 onClick={onOpenSidebar}
@@ -82,6 +82,11 @@ export function Header({ onOpenSidebar }: HeaderProps) {
               >
                 <BookmarkIcon className="w-5 h-5 text-gray-600" />
               </button>
+              <img
+                src="https://lirp.cdn-website.com/e49062f7/dms3rep/multi/opt/Luminatebank_PrimaryLogo_Color-1920w.jpg"
+                alt="Luminate Bank Logo"
+                className="h-10 w-auto hidden sm:block"
+              />
               <div>
                 {isEditingName ? (
                   <input

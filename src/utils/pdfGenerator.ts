@@ -3,6 +3,27 @@ import type { LoanScenario, LoanType } from '../types';
 import { LOAN_TYPE_INFO } from '../types';
 import type { PDFOptions } from '../components/PDFOptionsModal';
 
+// Logo URL
+const LOGO_URL = 'https://lirp.cdn-website.com/e49062f7/dms3rep/multi/opt/Luminatebank_PrimaryLogo_Color-1920w.jpg';
+
+/**
+ * Load an image from URL and convert to base64
+ */
+async function loadImageAsBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 // Color definitions matching the app
 const COLORS = {
   conventional: { r: 59, g: 130, b: 246 },  // blue-500
@@ -94,25 +115,36 @@ function drawPieSegment(
 /**
  * Generate a styled PDF that matches the page layout
  */
-export function generatePDF(
+export async function generatePDF(
   _elementId: string,
   scenario: LoanScenario,
   filename?: string,
   options?: PDFOptions
 ): Promise<void> {
-  return new Promise((resolve) => {
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pageWidth = 210;
-    const pageHeight = 297;
-    const margin = 14;
-    const { inputs, calculations } = scenario;
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margin = 14;
+  const { inputs, calculations } = scenario;
 
-    // Find lowest monthly payment
-    const lowestCalc = calculations.reduce((min, calc) =>
-      calc.totalMonthly < min.totalMonthly ? calc : min, calculations[0]);
+  // Load logo image
+  const logoBase64 = await loadImageAsBase64(LOGO_URL);
 
-    // ===== HEADER WITH CLIENT/LO INFO =====
-    let yPos = 12;
+  // Find lowest monthly payment
+  const lowestCalc = calculations.reduce((min, calc) =>
+    calc.totalMonthly < min.totalMonthly ? calc : min, calculations[0]);
+
+  // ===== HEADER WITH LOGO AND CLIENT/LO INFO =====
+  let yPos = 12;
+
+  // Add logo if loaded
+  if (logoBase64) {
+    try {
+      pdf.addImage(logoBase64, 'JPEG', margin, yPos - 4, 40, 12);
+    } catch {
+      // Logo failed to load, continue without it
+    }
+  }
 
     // If we have LO info, show it in top right
     if (options?.loName || options?.loCompany) {
@@ -484,12 +516,10 @@ export function generatePDF(
       { align: 'center' }
     );
 
-    // Save the PDF
-    const clientSlug = options?.clientName ? options.clientName.replace(/\s+/g, '-').toLowerCase() + '-' : '';
-    const pdfFilename = filename || `loan-comparison-${clientSlug}${Date.now()}.pdf`;
-    pdf.save(pdfFilename);
-    resolve();
-  });
+  // Save the PDF
+  const clientSlug = options?.clientName ? options.clientName.replace(/\s+/g, '-').toLowerCase() + '-' : '';
+  const pdfFilename = filename || `loan-comparison-${clientSlug}${Date.now()}.pdf`;
+  pdf.save(pdfFilename);
 }
 
 /**
