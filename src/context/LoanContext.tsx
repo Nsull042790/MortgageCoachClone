@@ -93,6 +93,7 @@ export function LoanProvider({ children }: { children: ReactNode }) {
         selectedLoanTypes: sharedData.selectedLoanTypes,
         calculations: [],
         emailTracking: { ...defaultEmailTracking },
+        videoMessage: sharedData.vimeoId ? { vimeoId: sharedData.vimeoId } : undefined,
       };
       setCurrentScenario(sharedScenario);
       setIsClientView(true);

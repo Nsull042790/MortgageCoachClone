@@ -13,6 +13,7 @@ interface ShareableData {
   lt: string[];    // selectedLoanTypes
   ir: Record<string, number>; // interestRates
   cn?: string;     // clientName (optional)
+  vid?: string;    // vimeoId (optional)
 }
 
 /**
@@ -21,7 +22,8 @@ interface ShareableData {
 export function encodeScenario(
   inputs: LoanInputs,
   selectedLoanTypes: LoanType[],
-  clientName?: string
+  clientName?: string,
+  vimeoId?: string
 ): string {
   const data: ShareableData = {
     hp: inputs.homePrice,
@@ -38,6 +40,10 @@ export function encodeScenario(
     data.cn = clientName;
   }
 
+  if (vimeoId) {
+    data.vid = vimeoId;
+  }
+
   const jsonString = JSON.stringify(data);
   const base64 = btoa(encodeURIComponent(jsonString));
   return base64;
@@ -50,6 +56,7 @@ export function decodeScenario(encoded: string): {
   inputs: LoanInputs;
   selectedLoanTypes: LoanType[];
   clientName?: string;
+  vimeoId?: string;
 } | null {
   try {
     const jsonString = decodeURIComponent(atob(encoded));
@@ -69,6 +76,7 @@ export function decodeScenario(encoded: string): {
       inputs,
       selectedLoanTypes: data.lt as LoanType[],
       clientName: data.cn,
+      vimeoId: data.vid,
     };
   } catch {
     return null;
@@ -81,9 +89,10 @@ export function decodeScenario(encoded: string): {
 export function generateShareableUrl(
   inputs: LoanInputs,
   selectedLoanTypes: LoanType[],
-  clientName?: string
+  clientName?: string,
+  vimeoId?: string
 ): string {
-  const encoded = encodeScenario(inputs, selectedLoanTypes, clientName);
+  const encoded = encodeScenario(inputs, selectedLoanTypes, clientName, vimeoId);
   const baseUrl = window.location.origin + window.location.pathname;
   return `${baseUrl}?s=${encoded}`;
 }

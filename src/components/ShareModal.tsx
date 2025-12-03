@@ -18,7 +18,8 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
   const shareableUrl = generateShareableUrl(
     currentScenario.inputs,
     currentScenario.selectedLoanTypes,
-    clientName || undefined
+    clientName || undefined,
+    currentScenario.videoMessage?.vimeoId
   );
 
   const handleCopy = async () => {

@@ -11,7 +11,7 @@ import { useLoan } from '../context/LoanContext';
 type WidgetMode = 'collapsed' | 'playing' | 'recording' | 'preview';
 
 export function VideoWidget() {
-  const { currentScenario, updateVideoMessage } = useLoan();
+  const { currentScenario, updateVideoMessage, isClientView } = useLoan();
   const videoMessage = currentScenario.videoMessage;
 
   const [mode, setMode] = useState<WidgetMode>('collapsed');
@@ -137,16 +137,24 @@ export function VideoWidget() {
 
   // Collapsed state - floating button
   if (mode === 'collapsed') {
+    // In client view, only show if there's a video to watch
+    const hasVideo = videoMessage?.vimeoId || hasRecordedVideo;
+    if (isClientView && !hasVideo) {
+      return null;
+    }
+
     return (
       <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3 items-end">
-        {/* Record button */}
-        <button
-          onClick={startCamera}
-          className="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-lg flex items-center justify-center transition-all hover:scale-110"
-          title="Record video message"
-        >
-          <VideoCameraIcon className="w-6 h-6" />
-        </button>
+        {/* Record button - hidden for clients */}
+        {!isClientView && (
+          <button
+            onClick={startCamera}
+            className="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-lg flex items-center justify-center transition-all hover:scale-110"
+            title="Record video message"
+          >
+            <VideoCameraIcon className="w-6 h-6" />
+          </button>
+        )}
 
         {/* Play button */}
         <button
@@ -200,13 +208,15 @@ export function VideoWidget() {
             <span className="text-xs text-gray-500">
               {hasRecordedVideo ? 'Recorded message' : 'From your loan officer'}
             </span>
-            <button
-              onClick={startCamera}
-              className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
-            >
-              <VideoCameraIcon className="w-4 h-4" />
-              Record new
-            </button>
+            {!isClientView && (
+              <button
+                onClick={startCamera}
+                className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+              >
+                <VideoCameraIcon className="w-4 h-4" />
+                Record new
+              </button>
+            )}
           </div>
         </div>
       </div>
