@@ -189,10 +189,20 @@ export function VideoWidget() {
           </button>
         )}
 
+        {/* Hint for clients */}
+        {isClientView && hasVideo && (
+          <div className="flex flex-col items-center animate-bounce">
+            <div className="bg-gray-900 text-white px-3 py-2 rounded-lg shadow-lg text-sm font-medium">
+              👋 Watch video message
+            </div>
+            <div className="text-gray-900 text-2xl">↓</div>
+          </div>
+        )}
+
         {/* Play button */}
         <button
           onClick={() => setMode('playing')}
-          className="w-16 h-16 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg flex items-center justify-center transition-all hover:scale-110 ring-4 ring-blue-200"
+          className="w-16 h-16 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg flex items-center justify-center transition-all hover:scale-110 ring-4 ring-blue-200 animate-pulse"
           title="Play video message"
         >
           <PlayIcon className="w-8 h-8 ml-1" />
