@@ -61,8 +61,8 @@ function AppContent() {
         </main>
       </div>
 
-      {/* Video Widget - hidden in client view */}
-      {!isClientView && <VideoWidget />}
+      {/* Video Widget - visible to clients */}
+      <VideoWidget />
     </div>
   );
 }
