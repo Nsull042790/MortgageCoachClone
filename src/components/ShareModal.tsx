@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { XMarkIcon, ClipboardDocumentIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ClipboardDocumentIcon, CheckIcon, VideoCameraIcon } from '@heroicons/react/24/outline';
 import { useLoan } from '../context/LoanContext';
 import { generateShareableUrl } from '../utils/urlSharing';
 
@@ -8,18 +8,52 @@ interface ShareModalProps {
   onClose: () => void;
 }
 
+/**
+ * Extract Vimeo video ID from URL or return as-is if already an ID
+ */
+function extractVimeoId(input: string): string | null {
+  if (!input.trim()) return null;
+
+  // If it's just numbers, it's already an ID
+  if (/^\d+$/.test(input.trim())) {
+    return input.trim();
+  }
+
+  // Try to extract from various Vimeo URL formats
+  // https://vimeo.com/123456789
+  // https://player.vimeo.com/video/123456789
+  // https://vimeo.com/channels/staffpicks/123456789
+  const patterns = [
+    /vimeo\.com\/(\d+)/,
+    /player\.vimeo\.com\/video\/(\d+)/,
+    /vimeo\.com\/channels\/[^/]+\/(\d+)/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = input.match(pattern);
+    if (match) {
+      return match[1];
+    }
+  }
+
+  return null;
+}
+
 export function ShareModal({ isOpen, onClose }: ShareModalProps) {
   const { currentScenario } = useLoan();
   const [clientName, setClientName] = useState('');
+  const [vimeoInput, setVimeoInput] = useState('');
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
+
+  const vimeoId = extractVimeoId(vimeoInput);
 
   const shareableUrl = generateShareableUrl(
     currentScenario.inputs,
     currentScenario.selectedLoanTypes,
     clientName || undefined,
-    currentScenario.videoMessage?.vimeoId
+    vimeoId || undefined
   );
 
   const handleCopy = async () => {
@@ -82,6 +116,34 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
             </p>
           </div>
 
+          {/* Vimeo Video (optional) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              <span className="flex items-center gap-1">
+                <VideoCameraIcon className="w-4 h-4" />
+                Video Message <span className="text-gray-400">(optional)</span>
+              </span>
+            </label>
+            <input
+              type="text"
+              value={vimeoInput}
+              onChange={(e) => setVimeoInput(e.target.value)}
+              placeholder="Paste Vimeo URL or video ID"
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                vimeoInput && !vimeoId ? 'border-red-300' : 'border-gray-300'
+              }`}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {vimeoInput && !vimeoId ? (
+                <span className="text-red-500">Invalid Vimeo URL or ID</span>
+              ) : vimeoId ? (
+                <span className="text-green-600">✓ Video ID: {vimeoId}</span>
+              ) : (
+                'Paste a Vimeo link to include a personalized video message'
+              )}
+            </p>
+          </div>
+
           {/* Shareable Link */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -125,6 +187,7 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
               <li>• All selected loan types with rates</li>
               <li>• Monthly payment breakdown</li>
               <li>• Visual charts for comparison</li>
+              {vimeoId && <li className="text-blue-600">• Your personalized video message</li>}
             </ul>
           </div>
         </div>
