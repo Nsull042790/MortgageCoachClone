@@ -45,6 +45,13 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
   const [vimeoInput, setVimeoInput] = useState('');
   const [copied, setCopied] = useState(false);
 
+  // Auto-fill with client name from scenario
+  useEffect(() => {
+    if (currentScenario.clientName) {
+      setClientName(currentScenario.clientName);
+    }
+  }, [currentScenario.clientName]);
+
   // Auto-fill with uploaded video's Vimeo ID when available
   useEffect(() => {
     if (currentScenario.videoMessage?.vimeoId) {

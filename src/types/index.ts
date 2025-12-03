@@ -46,6 +46,7 @@ export interface VideoMessage {
 export interface LoanScenario {
   id: string;
   name: string;
+  clientName?: string;
   createdAt: string;
   updatedAt: string;
   inputs: LoanInputs;

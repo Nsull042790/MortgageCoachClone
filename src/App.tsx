@@ -9,6 +9,7 @@ import {
   SavedScenariosSidebar,
   VideoWidget,
   PaymentCharts,
+  ClientNameInput,
 } from './components';
 
 function AppContent() {
@@ -31,6 +32,9 @@ function AppContent() {
 
         <main className="flex-1 overflow-auto">
           <div id="pdf-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+            {/* Client Name Input - hidden in client view */}
+            <ClientNameInput />
+
             {/* Loan Inputs - read-only display in client view */}
             <LoanInputs />
 

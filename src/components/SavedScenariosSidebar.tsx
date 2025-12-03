@@ -93,10 +93,21 @@ export function SavedScenariosSidebar({ isOpen, onClose }: SavedScenariosSidebar
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-gray-900 truncate">
-                            {scenario.name}
-                          </h3>
-                          <p className="text-xs text-gray-500 mt-1">
+                          {scenario.clientName ? (
+                            <>
+                              <h3 className="font-medium text-gray-900 truncate">
+                                {scenario.clientName}
+                              </h3>
+                              <p className="text-xs text-gray-500 mt-0.5 truncate">
+                                {scenario.name}
+                              </p>
+                            </>
+                          ) : (
+                            <h3 className="font-medium text-gray-900 truncate">
+                              {scenario.name}
+                            </h3>
+                          )}
+                          <p className="text-xs text-gray-400 mt-1">
                             {formatDate(scenario.updatedAt)}
                           </p>
                         </div>

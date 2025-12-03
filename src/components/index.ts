@@ -9,3 +9,4 @@ export { VideoWidget } from './VideoWidget';
 export { PDFOptionsModal } from './PDFOptionsModal';
 export { PaymentCharts } from './PaymentCharts';
 export { ShareModal } from './ShareModal';
+export { ClientNameInput } from './ClientNameInput';
