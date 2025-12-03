@@ -7,6 +7,7 @@ import {
   LoanTypeSelector,
   ComparisonGrid,
   SavedScenariosSidebar,
+  VideoWidget,
 } from './components';
 
 function AppContent() {
@@ -50,6 +51,9 @@ function AppContent() {
           </div>
         </main>
       </div>
+
+      {/* Video Widget */}
+      <VideoWidget />
     </div>
   );
 }

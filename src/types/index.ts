@@ -37,6 +37,12 @@ export interface LoanCalculation {
   totalCost: number; // Total cost over life of loan
 }
 
+export interface VideoMessage {
+  vimeoId?: string;
+  recordedVideoUrl?: string; // Blob URL for locally recorded video
+  thumbnailUrl?: string;
+}
+
 export interface LoanScenario {
   id: string;
   name: string;
@@ -46,6 +52,7 @@ export interface LoanScenario {
   selectedLoanTypes: LoanType[];
   calculations: LoanCalculation[];
   emailTracking: EmailTracking;
+  videoMessage?: VideoMessage;
 }
 
 export interface EmailTracking {

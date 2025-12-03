@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import type { LoanScenario, LoanInputs, LoanType, LoanCalculation, EmailTracking } from '../types';
+import type { LoanScenario, LoanInputs, LoanType, LoanCalculation, EmailTracking, VideoMessage } from '../types';
 import { DEFAULT_INTEREST_RATES } from '../types';
 import { calculateAllLoans } from '../utils/mortgageCalculations';
 import { getSavedScenarios, saveScenario, deleteScenario } from '../utils/storage';
@@ -29,6 +29,9 @@ interface LoanContextType {
   // Email tracking (mock)
   simulateEmailSent: () => void;
   simulateEmailOpened: () => void;
+
+  // Video message
+  updateVideoMessage: (videoMessage: VideoMessage) => void;
 }
 
 const defaultInputs: LoanInputs = {
@@ -186,6 +189,14 @@ export function LoanProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const updateVideoMessage = useCallback((videoMessage: VideoMessage) => {
+    setCurrentScenario((prev) => ({
+      ...prev,
+      videoMessage: { ...prev.videoMessage, ...videoMessage },
+      updatedAt: new Date().toISOString(),
+    }));
+  }, []);
+
   const value: LoanContextType = {
     currentScenario,
     calculations,
@@ -201,6 +212,7 @@ export function LoanProvider({ children }: { children: ReactNode }) {
     updateScenarioName,
     simulateEmailSent,
     simulateEmailOpened,
+    updateVideoMessage,
   };
 
   return <LoanContext.Provider value={value}>{children}</LoanContext.Provider>;
