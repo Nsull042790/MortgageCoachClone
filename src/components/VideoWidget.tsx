@@ -5,10 +5,14 @@ import {
   VideoCameraIcon,
   StopIcon,
   ArrowPathIcon,
+  ArrowUpTrayIcon,
+  CheckCircleIcon,
+  ExclamationCircleIcon,
 } from '@heroicons/react/24/solid';
 import { useLoan } from '../context/LoanContext';
+import { uploadToVimeo } from '../utils/vimeoUpload';
 
-type WidgetMode = 'collapsed' | 'playing' | 'recording' | 'preview';
+type WidgetMode = 'collapsed' | 'playing' | 'recording' | 'preview' | 'uploading';
 
 export function VideoWidget() {
   const { currentScenario, updateVideoMessage, isClientView } = useLoan();
@@ -17,7 +21,10 @@ export function VideoWidget() {
   const [mode, setMode] = useState<WidgetMode>('collapsed');
   const [isRecording, setIsRecording] = useState(false);
   const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
+  const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -90,6 +97,7 @@ export function VideoWidget() {
       const blob = new Blob(chunksRef.current, { type: 'video/webm' });
       const url = URL.createObjectURL(blob);
       setRecordedUrl(url);
+      setRecordedBlob(blob);
       setMode('preview');
 
       // Stop camera stream
@@ -111,10 +119,34 @@ export function VideoWidget() {
     }
   };
 
-  const saveRecording = () => {
-    if (recordedUrl) {
-      updateVideoMessage({ recordedVideoUrl: recordedUrl });
-      setMode('collapsed');
+  const saveRecording = async () => {
+    if (!recordedBlob) return;
+
+    setMode('uploading');
+    setUploadError(null);
+
+    const result = await uploadToVimeo(recordedBlob);
+
+    if (result.success && result.videoId) {
+      // Save the Vimeo ID to the scenario
+      updateVideoMessage({ vimeoId: result.videoId });
+      setUploadSuccess(true);
+
+      // Clean up local blob URL
+      if (recordedUrl) {
+        URL.revokeObjectURL(recordedUrl);
+      }
+      setRecordedUrl(null);
+      setRecordedBlob(null);
+
+      // Show success briefly then close
+      setTimeout(() => {
+        setUploadSuccess(false);
+        setMode('collapsed');
+      }, 2000);
+    } else {
+      setUploadError(result.error || 'Upload failed');
+      setMode('preview'); // Go back to preview to retry
     }
   };
 
@@ -123,6 +155,8 @@ export function VideoWidget() {
       URL.revokeObjectURL(recordedUrl);
     }
     setRecordedUrl(null);
+    setRecordedBlob(null);
+    setUploadError(null);
     startCamera();
   };
 
@@ -321,6 +355,16 @@ export function VideoWidget() {
             />
           </div>
 
+          {/* Error message */}
+          {uploadError && (
+            <div className="px-4 py-2 bg-red-50 border-t border-red-100">
+              <p className="text-sm text-red-600 flex items-center gap-2">
+                <ExclamationCircleIcon className="w-4 h-4" />
+                {uploadError}
+              </p>
+            </div>
+          )}
+
           {/* Controls */}
           <div className="px-4 py-4 bg-gray-50 flex justify-center gap-3">
             <button
@@ -332,10 +376,56 @@ export function VideoWidget() {
             </button>
             <button
               onClick={saveRecording}
-              className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-full font-medium transition-colors"
+              className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-full font-medium transition-colors flex items-center gap-2"
             >
-              Use This Video
+              <ArrowUpTrayIcon className="w-4 h-4" />
+              Upload & Use
             </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Uploading state
+  if (mode === 'uploading') {
+    return (
+      <div className="fixed bottom-6 right-6 z-50">
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-80 md:w-96">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 bg-blue-500 text-white">
+            <span className="text-sm font-medium flex items-center gap-2">
+              {uploadSuccess ? (
+                <>
+                  <CheckCircleIcon className="w-5 h-5" />
+                  Upload Complete!
+                </>
+              ) : (
+                <>
+                  <ArrowUpTrayIcon className="w-5 h-5 animate-bounce" />
+                  Uploading to Vimeo...
+                </>
+              )}
+            </span>
+          </div>
+
+          {/* Progress area */}
+          <div className="aspect-video bg-gray-900 flex items-center justify-center">
+            {uploadSuccess ? (
+              <div className="text-center">
+                <CheckCircleIcon className="w-16 h-16 text-green-400 mx-auto mb-3" />
+                <p className="text-white font-medium">Video ready to share!</p>
+                <p className="text-gray-400 text-sm mt-1">
+                  Your video will appear in the share link
+                </p>
+              </div>
+            ) : (
+              <div className="text-center">
+                <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-white font-medium">Uploading video...</p>
+                <p className="text-gray-400 text-sm mt-1">This may take a moment</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

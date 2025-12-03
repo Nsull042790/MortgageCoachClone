@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { XMarkIcon, ClipboardDocumentIcon, CheckIcon, VideoCameraIcon } from '@heroicons/react/24/outline';
 import { useLoan } from '../context/LoanContext';
 import { generateShareableUrl } from '../utils/urlSharing';
@@ -44,6 +44,13 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
   const [clientName, setClientName] = useState('');
   const [vimeoInput, setVimeoInput] = useState('');
   const [copied, setCopied] = useState(false);
+
+  // Auto-fill with uploaded video's Vimeo ID when available
+  useEffect(() => {
+    if (currentScenario.videoMessage?.vimeoId) {
+      setVimeoInput(currentScenario.videoMessage.vimeoId);
+    }
+  }, [currentScenario.videoMessage?.vimeoId]);
 
   if (!isOpen) return null;
 
