@@ -25,6 +25,7 @@ export interface LoanCalculation {
   loanType: LoanType;
   loanAmount: number;
   interestRate: number;
+  apr: number; // Annual Percentage Rate (includes fees)
   termMonths: number;
   monthlyPI: number;
   monthlyMI: number; // PMI, MIP, or funding fee amortized

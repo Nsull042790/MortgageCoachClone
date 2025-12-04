@@ -5,6 +5,7 @@ import { DEFAULT_INTEREST_RATES } from '../types';
 import { calculateAllLoans } from '../utils/mortgageCalculations';
 import { getSavedScenarios, saveScenario, deleteScenario } from '../utils/storage';
 import { getSharedScenarioFromUrl, clearSharedScenarioFromUrl } from '../utils/urlSharing';
+import { recordView } from '../utils/viewTracking';
 
 interface LoanContextType {
   // Current scenario state
@@ -84,6 +85,11 @@ export function LoanProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const sharedData = getSharedScenarioFromUrl();
     if (sharedData) {
+      // Record the view if tracking ID is present
+      if (sharedData.trackingId) {
+        recordView(sharedData.trackingId, sharedData.clientName);
+      }
+
       // Create a new scenario with the shared data
       const sharedScenario: LoanScenario = {
         id: uuidv4(),

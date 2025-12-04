@@ -109,6 +109,58 @@ export function getUSDAFees(loanAmount: number): { upfront: number; annualRate: 
 }
 
 /**
+ * Calculate APR (Annual Percentage Rate)
+ * APR accounts for fees by finding the rate that makes:
+ * Net Loan Amount = Present Value of all payments
+ * Uses Newton-Raphson method for iteration
+ */
+export function calculateAPR(
+  loanAmount: number,
+  monthlyPayment: number,
+  termMonths: number,
+  upfrontFees: number,
+  closingCosts: number
+): number {
+  // Net amount received by borrower
+  const netLoan = loanAmount - upfrontFees - closingCosts;
+
+  if (netLoan <= 0 || monthlyPayment <= 0) return 0;
+
+  // Start with nominal rate as initial guess
+  let rate = monthlyPayment * 12 / netLoan * 0.8;
+
+  // Newton-Raphson iteration
+  for (let i = 0; i < 100; i++) {
+    const monthlyRate = rate / 12;
+
+    // Calculate present value of payments at current rate
+    let pv = 0;
+    let pvDerivative = 0;
+
+    for (let n = 1; n <= termMonths; n++) {
+      const discount = Math.pow(1 + monthlyRate, -n);
+      pv += monthlyPayment * discount;
+      pvDerivative -= monthlyPayment * n * discount / (1 + monthlyRate) / 12;
+    }
+
+    const diff = pv - netLoan;
+
+    // Check convergence
+    if (Math.abs(diff) < 0.01) break;
+
+    // Newton-Raphson update
+    if (Math.abs(pvDerivative) > 0.0001) {
+      rate -= diff / pvDerivative;
+    }
+
+    // Keep rate in reasonable bounds
+    rate = Math.max(0.001, Math.min(0.5, rate));
+  }
+
+  return rate * 100; // Return as percentage
+}
+
+/**
  * Calculate full loan details for a specific loan type
  */
 export function calculateLoan(inputs: LoanInputs, loanType: LoanType): LoanCalculation {
@@ -170,10 +222,14 @@ export function calculateLoan(inputs: LoanInputs, loanType: LoanType): LoanCalcu
   const totalPayments = totalMonthly * termMonths;
   const totalCost = totalPayments + downPayment + upfrontFees;
 
+  // Calculate APR (includes P&I and MI in the payment, plus fees)
+  const apr = calculateAPR(loanAmount, monthlyPI + monthlyMI, termMonths, upfrontFees, estimatedClosingCosts);
+
   return {
     loanType,
     loanAmount,
     interestRate,
+    apr,
     termMonths,
     monthlyPI,
     monthlyMI,

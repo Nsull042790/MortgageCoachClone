@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
-import { XMarkIcon, ClipboardDocumentIcon, CheckIcon, VideoCameraIcon, LinkIcon } from '@heroicons/react/24/outline';
+import { useState, useEffect, useMemo } from 'react';
+import { XMarkIcon, ClipboardDocumentIcon, CheckIcon, VideoCameraIcon, LinkIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { useLoan } from '../context/LoanContext';
 import { generateShareableUrl } from '../utils/urlSharing';
+import { generateTrackingId, saveTrackingId, getViewSummary, formatRelativeTime } from '../utils/viewTracking';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -69,6 +70,12 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
   const [isShortening, setIsShortening] = useState(false);
   const [shortenError, setShortenError] = useState<string | null>(null);
 
+  // Generate a stable tracking ID for this share session
+  const trackingId = useMemo(() => generateTrackingId(), []);
+
+  // Get view summary for the current tracking ID
+  const [viewSummary, setViewSummary] = useState(() => getViewSummary(trackingId));
+
   // Auto-fill with client name from scenario
   useEffect(() => {
     if (currentScenario.clientName) {
@@ -89,6 +96,14 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
     setShortenError(null);
   }, [clientName, vimeoInput, currentScenario.inputs, currentScenario.selectedLoanTypes]);
 
+  // Refresh view summary periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setViewSummary(getViewSummary(trackingId));
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [trackingId]);
+
   if (!isOpen) return null;
 
   const vimeoId = extractVimeoId(vimeoInput);
@@ -97,13 +112,17 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
     currentScenario.inputs,
     currentScenario.selectedLoanTypes,
     clientName || undefined,
-    vimeoId || undefined
+    vimeoId || undefined,
+    trackingId
   );
 
-  // Reset short URL when inputs change
+  // Display URL - short or full
   const displayUrl = shortUrl || shareableUrl;
 
   const handleCopy = async () => {
+    // Save tracking ID when copying the link
+    saveTrackingId(trackingId, clientName || undefined);
+
     try {
       await navigator.clipboard.writeText(displayUrl);
       setCopied(true);
@@ -282,6 +301,33 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
               <li>• Visual charts for comparison</li>
               {vimeoId && <li style={{ color: '#967db9' }}>• Your personalized video message</li>}
             </ul>
+          </div>
+
+          {/* View Tracking */}
+          <div className="flex items-center justify-between p-3 border rounded-lg bg-white">
+            <div className="flex items-center gap-2">
+              <EyeIcon className="w-5 h-5 text-gray-400" />
+              <span className="text-sm text-gray-600">View Tracking</span>
+            </div>
+            <div className="text-right">
+              {viewSummary ? (
+                <div>
+                  <span className="text-lg font-semibold" style={{ color: '#0d173c' }}>
+                    {viewSummary.totalViews}
+                  </span>
+                  <span className="text-sm text-gray-500 ml-1">
+                    view{viewSummary.totalViews !== 1 ? 's' : ''}
+                  </span>
+                  {viewSummary.lastViewedAt && (
+                    <p className="text-xs text-gray-400">
+                      Last: {formatRelativeTime(viewSummary.lastViewedAt)}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <span className="text-sm text-gray-400">No views yet</span>
+              )}
+            </div>
           </div>
         </div>
 

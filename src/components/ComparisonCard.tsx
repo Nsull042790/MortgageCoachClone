@@ -17,7 +17,7 @@ function isLightColor(hex: string): boolean {
 }
 
 export function ComparisonCard({ calculation, isLowest }: ComparisonCardProps) {
-  const { loanType, interestRate, totalMonthly, monthlyPI, monthlyMI, monthlyTaxes, monthlyInsurance, upfrontFees, cashToClose, totalCost } = calculation;
+  const { loanType, interestRate, apr, totalMonthly, monthlyPI, monthlyMI, monthlyTaxes, monthlyInsurance, upfrontFees, cashToClose, totalCost } = calculation;
 
   const info = LOAN_TYPE_INFO[loanType];
   const headerBgColor = info.bgColor;
@@ -49,6 +49,7 @@ export function ComparisonCard({ calculation, isLowest }: ComparisonCardProps) {
       >
         <h3 className="text-lg font-semibold">{info.name}</h3>
         <p className="text-3xl font-bold mt-1">{formatPercent(interestRate, 3)}</p>
+        <p className="text-sm opacity-80 mt-0.5">{formatPercent(apr, 3)} APR</p>
       </div>
 
       {/* Body */}

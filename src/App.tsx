@@ -10,6 +10,7 @@ import {
   VideoWidget,
   PaymentCharts,
   ClientNameInput,
+  RateSimulator,
 } from './components';
 
 function AppContent() {
@@ -53,6 +54,9 @@ function AppContent() {
 
             {/* Payment Analysis Charts */}
             <PaymentCharts />
+
+            {/* Rate Change Simulator */}
+            <RateSimulator />
 
             {/* Disclaimer */}
             <div className="text-center text-xs text-gray-400 pt-8 pb-4">
