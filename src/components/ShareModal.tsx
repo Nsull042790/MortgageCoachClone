@@ -1,11 +1,32 @@
 import { useState, useEffect } from 'react';
-import { XMarkIcon, ClipboardDocumentIcon, CheckIcon, VideoCameraIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ClipboardDocumentIcon, CheckIcon, VideoCameraIcon, LinkIcon } from '@heroicons/react/24/outline';
 import { useLoan } from '../context/LoanContext';
 import { generateShareableUrl } from '../utils/urlSharing';
 
 interface ShareModalProps {
   isOpen: boolean;
   onClose: () => void;
+}
+
+/**
+ * Shorten a URL using is.gd service
+ */
+async function shortenUrl(longUrl: string): Promise<string> {
+  const response = await fetch(
+    `https://is.gd/create.php?format=json&url=${encodeURIComponent(longUrl)}`
+  );
+
+  if (!response.ok) {
+    throw new Error('Failed to shorten URL');
+  }
+
+  const data = await response.json();
+
+  if (data.errorcode) {
+    throw new Error(data.errormessage || 'Failed to shorten URL');
+  }
+
+  return data.shorturl;
 }
 
 /**
@@ -44,6 +65,9 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
   const [clientName, setClientName] = useState('');
   const [vimeoInput, setVimeoInput] = useState('');
   const [copied, setCopied] = useState(false);
+  const [shortUrl, setShortUrl] = useState<string | null>(null);
+  const [isShortening, setIsShortening] = useState(false);
+  const [shortenError, setShortenError] = useState<string | null>(null);
 
   // Auto-fill with client name from scenario
   useEffect(() => {
@@ -59,6 +83,12 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
     }
   }, [currentScenario.videoMessage?.vimeoId]);
 
+  // Reset short URL when inputs change
+  useEffect(() => {
+    setShortUrl(null);
+    setShortenError(null);
+  }, [clientName, vimeoInput, currentScenario.inputs, currentScenario.selectedLoanTypes]);
+
   if (!isOpen) return null;
 
   const vimeoId = extractVimeoId(vimeoInput);
@@ -70,15 +100,18 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
     vimeoId || undefined
   );
 
+  // Reset short URL when inputs change
+  const displayUrl = shortUrl || shareableUrl;
+
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(shareableUrl);
+      await navigator.clipboard.writeText(displayUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // Fallback for older browsers
       const textArea = document.createElement('textarea');
-      textArea.value = shareableUrl;
+      textArea.value = displayUrl;
       document.body.appendChild(textArea);
       textArea.select();
       document.execCommand('copy');
@@ -88,10 +121,31 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
     }
   };
 
+  const handleShorten = async () => {
+    if (shortUrl) {
+      // Already shortened, reset to full URL
+      setShortUrl(null);
+      setShortenError(null);
+      return;
+    }
+
+    setIsShortening(true);
+    setShortenError(null);
+
+    try {
+      const shortened = await shortenUrl(shareableUrl);
+      setShortUrl(shortened);
+    } catch (err) {
+      setShortenError(err instanceof Error ? err.message : 'Failed to shorten URL');
+    } finally {
+      setIsShortening(false);
+    }
+  };
+
   const handleEmailLink = () => {
     const subject = encodeURIComponent('Your Loan Comparison');
     const body = encodeURIComponent(
-      `Hi${clientName ? ' ' + clientName : ''},\n\nI've prepared a loan comparison for you. Click the link below to view it:\n\n${shareableUrl}\n\nLet me know if you have any questions!\n\nBest regards`
+      `Hi${clientName ? ' ' + clientName : ''},\n\nI've prepared a loan comparison for you. Click the link below to view it:\n\n${displayUrl}\n\nLet me know if you have any questions!\n\nBest regards`
     );
     window.open(`mailto:?subject=${subject}&body=${body}`);
   };
@@ -162,14 +216,39 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Shareable Link
+              {shortUrl && <span className="ml-2 text-xs text-green-600">(shortened)</span>}
             </label>
             <div className="flex gap-2">
               <input
                 type="text"
                 readOnly
-                value={shareableUrl}
+                value={displayUrl}
                 className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-600 truncate"
               />
+              <button
+                onClick={handleShorten}
+                disabled={isShortening}
+                className="flex items-center gap-1 px-3 py-2 rounded-lg font-medium text-sm transition-colors border hover:bg-gray-100 disabled:opacity-50"
+                style={{
+                  borderColor: shortUrl ? '#22c55e' : '#0d173c',
+                  color: shortUrl ? '#22c55e' : '#0d173c'
+                }}
+                title={shortUrl ? 'Show full URL' : 'Shorten URL'}
+              >
+                {isShortening ? (
+                  <span className="animate-pulse">...</span>
+                ) : shortUrl ? (
+                  <>
+                    <CheckIcon className="w-4 h-4" />
+                    Short
+                  </>
+                ) : (
+                  <>
+                    <LinkIcon className="w-4 h-4" />
+                    Shorten
+                  </>
+                )}
+              </button>
               <button
                 onClick={handleCopy}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors text-white hover:opacity-90"
@@ -188,6 +267,9 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
                 )}
               </button>
             </div>
+            {shortenError && (
+              <p className="text-xs text-red-500 mt-1">{shortenError}</p>
+            )}
           </div>
 
           {/* What's included */}
