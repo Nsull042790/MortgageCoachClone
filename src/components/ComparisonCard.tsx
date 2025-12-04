@@ -94,13 +94,10 @@ export function ComparisonCard({ calculation, isLowest }: ComparisonCardProps) {
             <span className="text-gray-500">Cash to Close</span>
             <span className="text-gray-900 font-medium">{formatCurrencyWhole(cashToClose)}</span>
           </div>
-        </div>
 
-        {/* Total Cost */}
-        <div className="border-t border-gray-200 pt-4 mt-4">
-          <div className="flex justify-between items-baseline">
-            <span className="text-gray-500 text-sm">Total Cost</span>
-            <span className="text-xl font-bold text-gray-900">{formatCurrencyWhole(totalCost)}</span>
+          <div className="flex justify-between">
+            <span className="text-gray-500">Total Cost (life of loan)</span>
+            <span className="text-gray-900 font-medium">{formatCurrencyWhole(totalCost)}</span>
           </div>
         </div>
       </div>
