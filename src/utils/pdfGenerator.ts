@@ -41,33 +41,41 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
   });
 }
 
-// Color definitions matching the app
+// Color definitions matching the app brand colors
 const COLORS = {
-  conventional: { r: 59, g: 130, b: 246 },  // blue-500
-  fha: { r: 34, g: 197, b: 94 },            // green-500
-  va: { r: 239, g: 68, b: 68 },             // red-500
-  usda: { r: 107, g: 114, b: 128 },         // gray-500
-  text: { r: 31, g: 41, b: 55 },            // gray-800
-  textLight: { r: 107, g: 114, b: 128 },    // gray-500
-  border: { r: 229, g: 231, b: 235 },       // gray-200
-  background: { r: 249, g: 250, b: 251 },   // gray-50
+  conventional30: { r: 13, g: 23, b: 60 },   // #0d173c - navy
+  conventional15: { r: 150, g: 218, b: 248 }, // #96daf8 - light blue
+  fha: { r: 206, g: 146, b: 193 },           // #ce92c1 - pink
+  va: { r: 150, g: 125, b: 185 },            // #967db9 - purple
+  usda: { r: 255, g: 209, b: 89 },           // #ffd159 - gold
+  text: { r: 13, g: 23, b: 60 },             // #0d173c - navy for text
+  textLight: { r: 107, g: 114, b: 128 },     // gray-500
+  border: { r: 229, g: 231, b: 235 },        // gray-200
+  background: { r: 249, g: 250, b: 251 },    // gray-50
   white: { r: 255, g: 255, b: 255 },
-  lowest: { r: 34, g: 197, b: 94 },         // green-500
-  blue: { r: 59, g: 130, b: 246 },          // blue-500
-  // Pie chart colors - matching screenshot
-  pi: { r: 59, g: 130, b: 246 },            // blue-500 - Principal & Interest
-  mi: { r: 245, g: 158, b: 11 },            // amber-500 - Mortgage Insurance
-  taxes: { r: 16, g: 185, b: 129 },         // emerald-500 - Property Taxes
-  insurance: { r: 139, g: 92, b: 246 },     // violet-500 - Home Insurance
-  hoa: { r: 236, g: 72, b: 153 },           // pink-500 - HOA
+  lowest: { r: 255, g: 209, b: 89 },         // #ffd159 - gold for lowest
+  primary: { r: 13, g: 23, b: 60 },          // #0d173c - navy
+  // Pie chart colors - matching brand
+  pi: { r: 13, g: 23, b: 60 },               // #0d173c - navy - Principal & Interest
+  mi: { r: 255, g: 209, b: 89 },             // #ffd159 - gold - Mortgage Insurance
+  taxes: { r: 150, g: 218, b: 248 },         // #96daf8 - light blue - Property Taxes
+  insurance: { r: 150, g: 125, b: 185 },     // #967db9 - purple - Home Insurance
+  hoa: { r: 206, g: 146, b: 193 },           // #ce92c1 - pink - HOA
 };
 
 function getColorForLoanType(loanType: LoanType): { r: number; g: number; b: number } {
-  if (loanType.startsWith('conventional')) return COLORS.conventional;
+  if (loanType === 'conventional30') return COLORS.conventional30;
+  if (loanType === 'conventional15') return COLORS.conventional15;
   if (loanType === 'fha30') return COLORS.fha;
   if (loanType === 'va30') return COLORS.va;
   if (loanType === 'usda30') return COLORS.usda;
-  return COLORS.conventional;
+  return COLORS.conventional30;
+}
+
+// Determine if a color needs light or dark text
+function needsLightText(color: { r: number; g: number; b: number }): boolean {
+  const luminance = (0.299 * color.r + 0.587 * color.g + 0.114 * color.b) / 255;
+  return luminance < 0.5;
 }
 
 function formatCurrency(value: number): string {
@@ -198,7 +206,7 @@ export async function generatePDF(
   if (options?.clientName) {
     yPos += 5;
     pdf.setFontSize(10);
-    pdf.setTextColor(COLORS.blue.r, COLORS.blue.g, COLORS.blue.b);
+    pdf.setTextColor(COLORS.primary.r, COLORS.primary.g, COLORS.primary.b);
     pdf.text(`Prepared for: ${options.clientName}`, margin, yPos);
   }
 
@@ -265,9 +273,13 @@ export async function generatePDF(
     pdf.roundedRect(cardX, yPos, cardWidth, 10, 2, 2, 'F');
     pdf.rect(cardX, yPos + 6, cardWidth, 4, 'F');
 
-    // Loan type name
+    // Loan type name - use light or dark text based on background
     pdf.setFontSize(8);
-    pdf.setTextColor(255, 255, 255);
+    if (needsLightText(color)) {
+      pdf.setTextColor(255, 255, 255);
+    } else {
+      pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
+    }
     pdf.text(info.shortName, cardX + cardWidth / 2, yPos + 7, { align: 'center' });
 
     // Interest rate
@@ -277,13 +289,18 @@ export async function generatePDF(
     pdf.text('Interest Rate', cardX + cardWidth / 2, cardY, { align: 'center' });
     cardY += 4;
     pdf.setFontSize(10);
-    pdf.setTextColor(color.r, color.g, color.b);
+    // Use color for rate text, but ensure dark colors are readable
+    if (needsLightText(color)) {
+      pdf.setTextColor(color.r, color.g, color.b);
+    } else {
+      pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
+    }
     pdf.text(`${calc.interestRate.toFixed(3)}%`, cardX + cardWidth / 2, cardY, { align: 'center' });
 
     // Total Monthly
     cardY += 6;
     if (isLowest) {
-      pdf.setFillColor(220, 252, 231);
+      pdf.setFillColor(255, 243, 205); // Light gold background for lowest
       pdf.roundedRect(cardX + 2, cardY - 3, cardWidth - 4, 10, 1, 1, 'F');
     }
     pdf.setFontSize(6);
@@ -291,7 +308,8 @@ export async function generatePDF(
     pdf.text('Total Monthly', cardX + cardWidth / 2, cardY, { align: 'center' });
     cardY += 4;
     pdf.setFontSize(11);
-    pdf.setTextColor(isLowest ? COLORS.lowest.r : COLORS.text.r, isLowest ? COLORS.lowest.g : COLORS.text.g, isLowest ? COLORS.lowest.b : COLORS.text.b);
+    // Green text looks odd with gold highlight, use dark text for lowest
+    pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
     pdf.text(formatCurrencyDecimal(calc.totalMonthly), cardX + cardWidth / 2, cardY, { align: 'center' });
 
     // Divider
@@ -332,7 +350,8 @@ export async function generatePDF(
       const badgeWidth = Math.min(24, cardWidth - 6);
       pdf.roundedRect(cardX + (cardWidth - badgeWidth) / 2, cardY - 2, badgeWidth, 6, 1, 1, 'F');
       pdf.setFontSize(5);
-      pdf.setTextColor(255, 255, 255);
+      // Gold background needs dark text for contrast
+      pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
       pdf.text('LOWEST', cardX + cardWidth / 2, cardY + 2, { align: 'center' });
     }
   });
