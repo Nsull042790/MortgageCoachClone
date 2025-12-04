@@ -17,11 +17,11 @@ import { LOAN_TYPE_INFO } from '../types';
 import type { LoanCalculation } from '../types';
 
 const PIE_COLORS = {
-  pi: '#3b82f6',      // blue-500 - Principal & Interest
-  mi: '#f59e0b',      // amber-500 - Mortgage Insurance
-  taxes: '#10b981',   // emerald-500 - Property Taxes
-  insurance: '#8b5cf6', // violet-500 - Home Insurance
-  hoa: '#ec4899',     // pink-500 - HOA
+  pi: '#0d173c',      // Primary - Principal & Interest
+  mi: '#ffd159',      // Golden - Mortgage Insurance
+  taxes: '#96daf8',   // Light blue - Property Taxes
+  insurance: '#967db9', // Purple - Home Insurance
+  hoa: '#ce92c1',     // Pink - HOA
 };
 
 function formatCurrency(value: number): string {
@@ -145,7 +145,7 @@ export function PaymentCharts() {
                   {barChartData.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={entry.totalMonthly === lowestPayment ? '#22c55e' : entry.color}
+                      fill={entry.totalMonthly === lowestPayment ? '#ffd159' : entry.color}
                       opacity={entry.totalMonthly === lowestPayment ? 1 : 0.8}
                     />
                   ))}
@@ -154,7 +154,7 @@ export function PaymentCharts() {
             </ResponsiveContainer>
           </div>
           <p className="text-xs text-gray-500 text-center mt-2">
-            <span className="inline-block w-3 h-3 bg-green-500 rounded mr-1"></span>
+            <span className="inline-block w-3 h-3 rounded mr-1" style={{ backgroundColor: '#ffd159' }}></span>
             Lowest monthly payment
           </p>
         </div>

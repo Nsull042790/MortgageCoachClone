@@ -141,11 +141,8 @@ export function Header({ onOpenSidebar }: HeaderProps) {
               <button
                 onClick={() => setShowPDFModal(true)}
                 disabled={isGeneratingPDF}
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 ${
-                  isClientView
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 text-gray-700 hover:bg-gray-100"
+                style={isClientView ? { backgroundColor: '#0d173c', color: '#ffffff' } : undefined}
                 title="Download PDF"
               >
                 <DocumentArrowDownIcon className="w-4 h-4" />
@@ -156,7 +153,8 @@ export function Header({ onOpenSidebar }: HeaderProps) {
                 /* Share with Client */
                 <button
                   onClick={() => setShowShareModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  className="flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-colors text-sm font-medium hover:opacity-90"
+                  style={{ backgroundColor: '#0d173c' }}
                 >
                   <ShareIcon className="w-4 h-4" />
                   <span className="hidden sm:inline">Share</span>

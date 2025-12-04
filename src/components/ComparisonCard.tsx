@@ -1,4 +1,4 @@
-import type { LoanCalculation, LoanType } from '../types';
+import type { LoanCalculation } from '../types';
 import { LOAN_TYPE_INFO } from '../types';
 import { formatCurrency, formatCurrencyWhole, formatPercent } from '../utils/mortgageCalculations';
 
@@ -7,19 +7,21 @@ interface ComparisonCardProps {
   isLowest: boolean;
 }
 
-const HEADER_COLORS: Record<LoanType, string> = {
-  conventional30: 'bg-blue-500',
-  conventional15: 'bg-blue-500',
-  fha30: 'bg-green-500',
-  va30: 'bg-red-500',
-  usda30: 'bg-gray-500',
-};
+// Determine if a color is light (needs dark text) or dark (needs light text)
+function isLightColor(hex: string): boolean {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.5;
+}
 
 export function ComparisonCard({ calculation, isLowest }: ComparisonCardProps) {
   const { loanType, interestRate, totalMonthly, monthlyPI, monthlyMI, monthlyTaxes, monthlyInsurance, upfrontFees, cashToClose, totalCost } = calculation;
 
   const info = LOAN_TYPE_INFO[loanType];
-  const headerColor = HEADER_COLORS[loanType];
+  const headerBgColor = info.bgColor;
+  const headerTextColor = isLightColor(headerBgColor) ? '#0d173c' : '#ffffff';
 
   // Determine MI label based on loan type
   const getMILabel = (): string => {
@@ -41,7 +43,10 @@ export function ComparisonCard({ calculation, isLowest }: ComparisonCardProps) {
   return (
     <div className={`bg-white rounded-xl shadow-lg overflow-hidden border-2 ${isLowest ? 'border-green-400 ring-2 ring-green-200' : 'border-transparent'}`}>
       {/* Header */}
-      <div className={`${headerColor} text-white px-4 py-4 text-center`}>
+      <div
+        className="px-4 py-4 text-center"
+        style={{ backgroundColor: headerBgColor, color: headerTextColor }}
+      >
         <h3 className="text-lg font-semibold">{info.name}</h3>
         <p className="text-3xl font-bold mt-1">{formatPercent(interestRate, 3)}</p>
       </div>

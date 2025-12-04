@@ -172,11 +172,8 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
               />
               <button
                 onClick={handleCopy}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-                  copied
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                }`}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors text-white hover:opacity-90"
+                style={{ backgroundColor: copied ? '#22c55e' : '#0d173c' }}
               >
                 {copied ? (
                   <>
@@ -201,7 +198,7 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
               <li>• All selected loan types with rates</li>
               <li>• Monthly payment breakdown</li>
               <li>• Visual charts for comparison</li>
-              {vimeoId && <li className="text-blue-600">• Your personalized video message</li>}
+              {vimeoId && <li style={{ color: '#967db9' }}>• Your personalized video message</li>}
             </ul>
           </div>
         </div>
