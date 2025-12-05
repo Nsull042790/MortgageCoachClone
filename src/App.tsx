@@ -11,6 +11,7 @@ import {
   PaymentCharts,
   ClientNameInput,
   RateSimulator,
+  ClosingCostsBreakdown,
 } from './components';
 
 function AppContent() {
@@ -57,6 +58,9 @@ function AppContent() {
 
             {/* Rate Change Simulator */}
             <RateSimulator />
+
+            {/* Closing Costs Breakdown */}
+            <ClosingCostsBreakdown />
 
             {/* Disclaimer */}
             <div className="text-center text-xs text-gray-400 pt-8 pb-4">

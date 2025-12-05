@@ -11,3 +11,4 @@ export { PaymentCharts } from './PaymentCharts';
 export { ShareModal } from './ShareModal';
 export { ClientNameInput } from './ClientNameInput';
 export { RateSimulator } from './RateSimulator';
+export { ClosingCostsBreakdown } from './ClosingCostsBreakdown';
