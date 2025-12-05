@@ -1,8 +1,8 @@
 import { useState, useEffect, type ChangeEvent } from 'react';
-import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
+import { ChevronDownIcon, ChevronUpIcon, UserGroupIcon, HomeIcon } from '@heroicons/react/24/outline';
 import { useLoan } from '../context/LoanContext';
-import type { CreditScoreRange } from '../types';
-import { CREDIT_SCORE_OPTIONS } from '../types';
+import type { CreditScoreRange, BorrowerCount, PMIOption } from '../types';
+import { CREDIT_SCORE_OPTIONS, PMI_OPTION_INFO } from '../types';
 import { formatCurrencyWhole, formatPercent } from '../utils/mortgageCalculations';
 
 export function LoanInputs() {
@@ -47,9 +47,24 @@ export function LoanInputs() {
     updateInputs({ creditScore: e.target.value as CreditScoreRange });
   };
 
+  const handleBorrowerCountChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    updateInputs({ borrowerCount: e.target.value as BorrowerCount });
+  };
+
+  const handleFirstTimeHomeBuyerChange = (e: ChangeEvent<HTMLInputElement>) => {
+    updateInputs({ firstTimeHomeBuyer: e.target.checked });
+  };
+
+  const handlePmiOptionChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    updateInputs({ pmiOption: e.target.value as PMIOption });
+  };
+
   const toggleDownPaymentMode = () => {
     setDownPaymentMode(downPaymentMode === '$' ? '%' : '$');
   };
+
+  // Only show PMI options if LTV > 80% (for conventional loans)
+  const needsPMI = ltv > 80;
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -140,41 +155,113 @@ export function LoanInputs() {
 
       {/* Advanced Options */}
       {showAdvanced && (
-        <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Annual Taxes */}
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-2">Annual Taxes</label>
-            <input
-              type="number"
-              value={inputs.annualTaxes || ''}
-              onChange={handleNumberChange('annualTaxes')}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-              placeholder="4800"
-            />
+        <div className="mt-4 pt-4 border-t border-gray-200 space-y-6">
+          {/* Borrower Details Row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Number of Borrowers */}
+            <div>
+              <label className="block text-sm font-medium text-gray-500 mb-2 flex items-center gap-1.5">
+                <UserGroupIcon className="w-4 h-4" />
+                Borrowers
+              </label>
+              <select
+                value={inputs.borrowerCount || 'single'}
+                onChange={handleBorrowerCountChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+              >
+                <option value="single">Single Borrower</option>
+                <option value="multi">Multiple Borrowers</option>
+              </select>
+            </div>
+
+            {/* First-Time Home Buyer */}
+            <div>
+              <label className="block text-sm font-medium text-gray-500 mb-2 flex items-center gap-1.5">
+                <HomeIcon className="w-4 h-4" />
+                First-Time Buyer
+              </label>
+              <label className="flex items-center gap-3 px-4 py-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="checkbox"
+                  checked={inputs.firstTimeHomeBuyer || false}
+                  onChange={handleFirstTimeHomeBuyerChange}
+                  className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-gray-700">
+                  {inputs.firstTimeHomeBuyer ? 'Yes (HomePossible rates)' : 'No'}
+                </span>
+              </label>
+            </div>
+
+            {/* PMI Option (only show if LTV > 80%) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-500 mb-2">
+                PMI Option
+              </label>
+              {needsPMI ? (
+                <select
+                  value={inputs.pmiOption || 'bpmi'}
+                  onChange={handlePmiOptionChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                >
+                  {Object.entries(PMI_OPTION_INFO)
+                    .filter(([key]) => key !== 'none')
+                    .map(([key, info]) => (
+                      <option key={key} value={key}>
+                        {info.name}
+                      </option>
+                    ))}
+                </select>
+              ) : (
+                <div className="px-4 py-3 border border-gray-200 rounded-lg bg-green-50 text-green-700 text-sm">
+                  No PMI Required (20%+ down)
+                </div>
+              )}
+              {needsPMI && inputs.pmiOption && inputs.pmiOption !== 'none' && (
+                <p className="text-xs text-gray-500 mt-1">
+                  {PMI_OPTION_INFO[inputs.pmiOption]?.description}
+                </p>
+              )}
+            </div>
           </div>
 
-          {/* Annual Insurance */}
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-2">Annual Insurance</label>
-            <input
-              type="number"
-              value={inputs.annualInsurance || ''}
-              onChange={handleNumberChange('annualInsurance')}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-              placeholder="1800"
-            />
-          </div>
+          {/* Property Costs Row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Annual Taxes */}
+            <div>
+              <label className="block text-sm font-medium text-gray-500 mb-2">Annual Taxes</label>
+              <input
+                type="number"
+                value={inputs.annualTaxes || ''}
+                onChange={handleNumberChange('annualTaxes')}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                placeholder="4800"
+              />
+            </div>
 
-          {/* Monthly HOA */}
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-2">Monthly HOA</label>
-            <input
-              type="number"
-              value={inputs.monthlyHOA || ''}
-              onChange={handleNumberChange('monthlyHOA')}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-              placeholder="0"
-            />
+            {/* Annual Insurance */}
+            <div>
+              <label className="block text-sm font-medium text-gray-500 mb-2">Annual Insurance</label>
+              <input
+                type="number"
+                value={inputs.annualInsurance || ''}
+                onChange={handleNumberChange('annualInsurance')}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                placeholder="1800"
+              />
+            </div>
+
+            {/* Monthly HOA */}
+            <div>
+              <label className="block text-sm font-medium text-gray-500 mb-2">Monthly HOA</label>
+              <input
+                type="number"
+                value={inputs.monthlyHOA || ''}
+                onChange={handleNumberChange('monthlyHOA')}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                placeholder="0"
+              />
+            </div>
           </div>
         </div>
       )}

@@ -50,6 +50,9 @@ const defaultInputs: LoanInputs = {
   annualInsurance: 1800,
   monthlyHOA: 0,
   interestRates: { ...DEFAULT_INTEREST_RATES },
+  borrowerCount: 'single',
+  firstTimeHomeBuyer: false,
+  pmiOption: 'bpmi',
 };
 
 const defaultEmailTracking: EmailTracking = {

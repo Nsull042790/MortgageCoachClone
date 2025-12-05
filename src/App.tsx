@@ -12,6 +12,7 @@ import {
   ClientNameInput,
   RateSimulator,
   ClosingCostsBreakdown,
+  AmortizationSchedule,
 } from './components';
 
 function AppContent() {
@@ -61,6 +62,9 @@ function AppContent() {
 
             {/* Closing Costs Breakdown */}
             <ClosingCostsBreakdown />
+
+            {/* Amortization Schedule */}
+            <AmortizationSchedule />
 
             {/* Disclaimer */}
             <div className="text-center text-xs text-gray-400 pt-8 pb-4">

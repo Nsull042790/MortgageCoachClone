@@ -1,5 +1,6 @@
 import type { LoanType, LoanInputs, LoanCalculation, CreditScoreRange } from '../types';
 import { LOAN_TYPE_INFO } from '../types';
+import { calculatePMI, getLPMIRateAdjustment } from './pmiRates';
 
 /**
  * Calculate monthly Principal & Interest payment
@@ -164,21 +165,25 @@ export function calculateAPR(
  * Calculate full loan details for a specific loan type
  */
 export function calculateLoan(inputs: LoanInputs, loanType: LoanType): LoanCalculation {
-  const { homePrice, downPayment, creditScore, annualTaxes, annualInsurance, monthlyHOA, interestRates } = inputs;
+  const {
+    homePrice,
+    downPayment,
+    creditScore,
+    annualTaxes,
+    annualInsurance,
+    monthlyHOA,
+    interestRates,
+    borrowerCount = 'single',
+    firstTimeHomeBuyer = false,
+    pmiOption = 'bpmi'
+  } = inputs;
 
-  const loanAmount = homePrice - downPayment;
+  let loanAmount = homePrice - downPayment;
   const ltv = (loanAmount / homePrice) * 100;
   const downPaymentPercent = (downPayment / homePrice) * 100;
-  const interestRate = interestRates[loanType];
+  let interestRate = interestRates[loanType];
   const termYears = LOAN_TYPE_INFO[loanType].termYears;
   const termMonths = termYears * 12;
-
-  // Calculate P&I
-  const monthlyPI = calculateMonthlyPI(loanAmount, interestRate, termMonths);
-
-  // Calculate monthly taxes and insurance
-  const monthlyTaxes = annualTaxes / 12;
-  const monthlyInsurance = annualInsurance / 12;
 
   // Calculate mortgage insurance and upfront fees based on loan type
   let monthlyMI = 0;
@@ -187,8 +192,35 @@ export function calculateLoan(inputs: LoanInputs, loanType: LoanType): LoanCalcu
   switch (loanType) {
     case 'conventional30':
     case 'conventional15': {
-      const pmiRate = getPMIRate(ltv, creditScore);
-      monthlyMI = (loanAmount * (pmiRate / 100)) / 12;
+      // Use enhanced PMI calculation with borrower count and first-time buyer status
+      const pmiResult = calculatePMI(
+        loanAmount,
+        homePrice,
+        creditScore,
+        borrowerCount,
+        firstTimeHomeBuyer,
+        pmiOption
+      );
+
+      monthlyMI = pmiResult.monthlyPremium;
+      upfrontFees = pmiResult.upfrontPremium;
+
+      // For single premium financed, add to loan amount
+      if (pmiResult.additionalLoanAmount > 0) {
+        loanAmount += pmiResult.additionalLoanAmount;
+      }
+
+      // For LPMI, adjust interest rate
+      if (pmiResult.pmiType === 'lpmi') {
+        const lpmiAdjustment = getLPMIRateAdjustment(
+          homePrice,
+          loanAmount,
+          creditScore,
+          borrowerCount,
+          firstTimeHomeBuyer
+        );
+        interestRate += lpmiAdjustment;
+      }
       break;
     }
     case 'fha30': {
@@ -210,6 +242,13 @@ export function calculateLoan(inputs: LoanInputs, loanType: LoanType): LoanCalcu
       break;
     }
   }
+
+  // Calculate P&I (after potential loan amount adjustment for financed PMI)
+  const monthlyPI = calculateMonthlyPI(loanAmount, interestRate, termMonths);
+
+  // Calculate monthly taxes and insurance
+  const monthlyTaxes = annualTaxes / 12;
+  const monthlyInsurance = annualInsurance / 12;
 
   // Total monthly payment
   const totalMonthly = monthlyPI + monthlyMI + monthlyTaxes + monthlyInsurance + monthlyHOA;

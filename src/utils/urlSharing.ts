@@ -1,4 +1,4 @@
-import type { LoanInputs, LoanType } from '../types';
+import type { LoanInputs, LoanType, BorrowerCount, PMIOption } from '../types';
 
 /**
  * Data structure for sharing via URL (minimal data needed to reconstruct scenario)
@@ -15,6 +15,9 @@ interface ShareableData {
   cn?: string;     // clientName (optional)
   vid?: string;    // vimeoId (optional)
   tid?: string;    // trackingId (optional)
+  bc?: string;     // borrowerCount (optional, default 'single')
+  fthb?: boolean;  // firstTimeHomeBuyer (optional, default false)
+  pmi?: string;    // pmiOption (optional, default 'bpmi')
 }
 
 /**
@@ -36,6 +39,9 @@ export function encodeScenario(
     hoa: inputs.monthlyHOA,
     lt: selectedLoanTypes,
     ir: inputs.interestRates,
+    bc: inputs.borrowerCount,
+    fthb: inputs.firstTimeHomeBuyer,
+    pmi: inputs.pmiOption,
   };
 
   if (clientName) {
@@ -77,6 +83,10 @@ export function decodeScenario(encoded: string): {
       annualInsurance: data.ai,
       monthlyHOA: data.hoa,
       interestRates: data.ir as Record<LoanType, number>,
+      // New fields with defaults for backward compatibility
+      borrowerCount: (data.bc as BorrowerCount) || 'single',
+      firstTimeHomeBuyer: data.fthb ?? false,
+      pmiOption: (data.pmi as PMIOption) || 'bpmi',
     };
 
     return {

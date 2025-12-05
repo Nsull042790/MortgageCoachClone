@@ -12,29 +12,55 @@ interface ClosingCostItem {
   editable?: boolean;
 }
 
-// Calculate itemized closing costs based on loan amount
+/**
+ * Calculate title insurance based on purchase price
+ * Uses industry-standard tiered formula
+ */
+function calculateTitleInsurance(purchasePrice: number, type: 'lender' | 'owner'): number {
+  // Lender's title insurance is typically based on loan amount, owner's on purchase price
+  // Base rate approximately $4.50 per thousand
+  const baseRate = type === 'lender' ? 4.51 : 0.39;
+  return Math.ceil(purchasePrice / 1000) * baseRate;
+}
+
+// Calculate itemized closing costs based on loan amount (matching Excel structure)
 function calculateClosingCostItems(loanAmount: number, homePrice: number): ClosingCostItem[] {
+  const lenderTitleIns = calculateTitleInsurance(loanAmount, 'lender');
+  const ownerTitleIns = calculateTitleInsurance(homePrice, 'owner');
+
   return [
-    // Lender Fees
-    { name: 'Loan Origination Fee', amount: loanAmount * 0.01, category: 'lender', editable: true },
-    { name: 'Application Fee', amount: 500, category: 'lender', editable: true },
-    { name: 'Underwriting Fee', amount: 750, category: 'lender', editable: true },
-    { name: 'Credit Report', amount: 50, category: 'lender' },
-    { name: 'Flood Certification', amount: 25, category: 'lender' },
+    // Origination Charges (Lender Fees)
+    { name: 'Commitment/Origination Fee', amount: loanAmount * 0.00266, category: 'lender', editable: true }, // ~0.266% of loan
+    { name: 'Discount Points', amount: 0, category: 'lender', editable: true },
 
-    // Title Fees
-    { name: 'Title Search', amount: 200, category: 'title' },
-    { name: 'Title Insurance', amount: homePrice * 0.005, category: 'title', editable: true },
-    { name: 'Settlement/Closing Fee', amount: 500, category: 'title', editable: true },
+    // Services You Cannot Shop For
+    { name: 'Appraisal Fee', amount: 475, category: 'lender', editable: true },
+    { name: 'Credit Report Fee', amount: 309, category: 'lender', editable: true },
+    { name: 'Flood Certification', amount: 10, category: 'lender' },
+    { name: 'Tax Service Fee', amount: 0, category: 'lender', editable: true },
 
-    // Government Fees
-    { name: 'Recording Fees', amount: 125, category: 'government' },
-    { name: 'Transfer Taxes', amount: homePrice * 0.002, category: 'government', editable: true },
+    // Services You Can Shop For (Title Fees)
+    { name: 'Title - Closing Protection Letter', amount: 75, category: 'title' },
+    { name: 'Title - Settlement Fee', amount: 650, category: 'title', editable: true },
+    { name: 'Title - Courier Fee', amount: 60, category: 'title' },
+    { name: 'Title - E Doc Title Fee', amount: 50, category: 'title' },
+    { name: 'Title - Lender Title Insurance', amount: lenderTitleIns, category: 'title', editable: true },
+    { name: 'Title - Notary Fees', amount: 25, category: 'title' },
+    { name: 'Title - Recording Service Fee', amount: 15, category: 'title' },
+    { name: 'Title - Title Endorsement', amount: 100, category: 'title' },
+    { name: 'Title - Title Examination', amount: 100, category: 'title' },
+    { name: 'Title - Title Search', amount: 187, category: 'title', editable: true },
+    { name: 'Title - Wire Transfer Fee', amount: 12, category: 'title' },
 
-    // Other
-    { name: 'Appraisal', amount: 550, category: 'other', editable: true },
-    { name: 'Survey', amount: 400, category: 'other', editable: true },
-    { name: 'Home Inspection', amount: 450, category: 'other', editable: true },
+    // Government Fees (Taxes and Govt. Fees)
+    { name: 'Govt. Recording Fee - Deed', amount: 83, category: 'government' },
+    { name: 'Govt. Recording Fee - Mortgage', amount: 333, category: 'government' },
+    { name: 'Other Recording Fees', amount: 20, category: 'government' },
+    { name: 'State/Local Transfer Tax', amount: 0, category: 'government', editable: true }, // NJ Mansion Tax etc.
+
+    // Other Fees
+    { name: 'Borrower Attorney Fee', amount: 1500, category: 'other', editable: true },
+    { name: 'Owners Title Insurance', amount: ownerTitleIns, category: 'other', editable: true },
   ];
 }
 
@@ -95,17 +121,30 @@ export function ClosingCostsBreakdown() {
     [baseItems, customCosts]
   );
 
-  // Calculate prepaid items (escrow)
+  // Calculate prepaid items and initial escrow (matching Excel format)
   const prepaidItems: ClosingCostItem[] = useMemo(() => {
     const monthlyTaxes = currentScenario.inputs.annualTaxes / 12;
     const monthlyInsurance = currentScenario.inputs.annualInsurance / 12;
     const dailyInterest = (loanAmount * (selectedCalc?.interestRate || 6.5) / 100) / 365;
 
+    // Per Excel structure:
+    // Prepaid Items:
+    // - Homeowners Insurance Premium (1 year upfront)
+    // - Prepaid Interest (15 days at daily rate)
+    // - Property Taxes (2 months)
+    //
+    // Initial Escrow Collection (separate from prepaid):
+    // - Homeowners Insurance (4 months cushion)
+    // - Property Taxes (3 months cushion)
+
     return [
-      { name: 'Property Tax Escrow (3 months)', amount: monthlyTaxes * 3, category: 'prepaid' as const },
-      { name: 'Homeowners Insurance Escrow (3 months)', amount: monthlyInsurance * 3, category: 'prepaid' as const },
-      { name: 'Prepaid Interest (15 days)', amount: dailyInterest * 15, category: 'prepaid' as const },
-      { name: 'Initial Insurance Premium (1 year)', amount: currentScenario.inputs.annualInsurance, category: 'prepaid' as const },
+      // Prepaid Items
+      { name: 'Homeowners Insurance Premium (1 year)', amount: currentScenario.inputs.annualInsurance, category: 'prepaid' as const },
+      { name: `Prepaid Interest (15 days @ $${dailyInterest.toFixed(2)}/day)`, amount: dailyInterest * 15, category: 'prepaid' as const },
+      { name: `Property Taxes (2 months @ $${monthlyTaxes.toFixed(2)}/mo)`, amount: monthlyTaxes * 2, category: 'prepaid' as const },
+      // Initial Escrow Collection
+      { name: `HOI Escrow (4 months @ $${monthlyInsurance.toFixed(2)}/mo)`, amount: monthlyInsurance * 4, category: 'prepaid' as const },
+      { name: `Property Tax Escrow (3 months @ $${monthlyTaxes.toFixed(2)}/mo)`, amount: monthlyTaxes * 3, category: 'prepaid' as const },
     ];
   }, [currentScenario.inputs, loanAmount, selectedCalc]);
 

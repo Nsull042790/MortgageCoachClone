@@ -11,6 +11,18 @@ export type CreditScoreRange =
   | '620-639'
   | '<620';
 
+export type BorrowerCount = 'single' | 'multi';
+
+export type PMIOption = 'bpmi' | 'lpmi' | 'singlePIF' | 'singleFin' | 'none';
+
+export const PMI_OPTION_INFO: Record<PMIOption, { name: string; description: string }> = {
+  bpmi: { name: 'Monthly PMI', description: 'Borrower-paid monthly PMI added to payment' },
+  lpmi: { name: 'Lender-Paid PMI', description: 'Higher rate, no monthly PMI' },
+  singlePIF: { name: 'Single Premium (Paid)', description: 'One-time upfront PMI payment' },
+  singleFin: { name: 'Single Premium (Financed)', description: 'PMI added to loan amount' },
+  none: { name: 'No PMI', description: '20%+ down payment, no PMI required' },
+};
+
 export interface LoanInputs {
   homePrice: number;
   downPayment: number;
@@ -19,6 +31,10 @@ export interface LoanInputs {
   annualInsurance: number;
   monthlyHOA: number;
   interestRates: Record<LoanType, number>;
+  borrowerCount: BorrowerCount;
+  firstTimeHomeBuyer: boolean;
+  pmiOption: PMIOption;
+  closingDate?: string; // For prepaid interest calculation
 }
 
 export interface LoanCalculation {
