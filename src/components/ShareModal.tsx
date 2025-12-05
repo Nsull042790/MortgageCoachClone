@@ -62,7 +62,7 @@ function extractVimeoId(input: string): string | null {
 }
 
 export function ShareModal({ isOpen, onClose }: ShareModalProps) {
-  const { currentScenario } = useLoan();
+  const { currentScenario, updateTrackingId } = useLoan();
   const [clientName, setClientName] = useState('');
   const [vimeoInput, setVimeoInput] = useState('');
   const [copied, setCopied] = useState(false);
@@ -122,6 +122,8 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
   const handleCopy = async () => {
     // Save tracking ID when copying the link
     saveTrackingId(trackingId, clientName || undefined);
+    // Also save to the current scenario for persistence
+    updateTrackingId(trackingId);
 
     try {
       await navigator.clipboard.writeText(displayUrl);

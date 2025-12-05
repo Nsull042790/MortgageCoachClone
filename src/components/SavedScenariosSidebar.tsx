@@ -1,7 +1,8 @@
 import { type MouseEvent } from 'react';
-import { XMarkIcon, TrashIcon, FolderOpenIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, TrashIcon, FolderOpenIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { useLoan } from '../context/LoanContext';
 import { formatCurrencyWhole } from '../utils/mortgageCalculations';
+import { getViewSummary, formatRelativeTime } from '../utils/viewTracking';
 
 interface SavedScenariosSidebarProps {
   isOpen: boolean;
@@ -78,6 +79,7 @@ export function SavedScenariosSidebar({ isOpen, onClose }: SavedScenariosSidebar
                   const lowestCalc = scenario.calculations.length > 0
                     ? scenario.calculations.reduce((min, c) => c.totalMonthly < min.totalMonthly ? c : min)
                     : null;
+                  const viewSummary = scenario.trackingId ? getViewSummary(scenario.trackingId) : null;
 
                   return (
                     <div
@@ -137,6 +139,24 @@ export function SavedScenariosSidebar({ isOpen, onClose }: SavedScenariosSidebar
                           </div>
                         )}
                       </div>
+
+                      {/* View tracking */}
+                      {viewSummary && viewSummary.totalViews > 0 && (
+                        <div className="mt-2 flex items-center gap-2 text-xs bg-blue-50 rounded px-2 py-1.5">
+                          <EyeIcon className="w-3.5 h-3.5 text-blue-500" />
+                          <span className="font-medium text-blue-700">
+                            {viewSummary.totalViews} view{viewSummary.totalViews !== 1 ? 's' : ''}
+                          </span>
+                          {viewSummary.lastViewedAt && (
+                            <>
+                              <span className="text-blue-400">•</span>
+                              <span className="text-blue-600">
+                                {formatRelativeTime(viewSummary.lastViewedAt)}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      )}
 
                       {/* Email tracking */}
                       {scenario.emailTracking.sent > 0 && (

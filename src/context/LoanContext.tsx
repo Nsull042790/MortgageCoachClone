@@ -32,6 +32,7 @@ interface LoanContextType {
   createNewScenario: () => void;
   updateScenarioName: (name: string) => void;
   updateClientName: (clientName: string) => void;
+  updateTrackingId: (trackingId: string) => void;
 
   // Email tracking (mock)
   simulateEmailSent: () => void;
@@ -210,6 +211,14 @@ export function LoanProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const updateTrackingId = useCallback((trackingId: string) => {
+    setCurrentScenario((prev) => ({
+      ...prev,
+      trackingId,
+      updatedAt: new Date().toISOString(),
+    }));
+  }, []);
+
   // Mock email functions
   const simulateEmailSent = useCallback(() => {
     setCurrentScenario((prev) => ({
@@ -259,6 +268,7 @@ export function LoanProvider({ children }: { children: ReactNode }) {
     createNewScenario,
     updateScenarioName,
     updateClientName,
+    updateTrackingId,
     simulateEmailSent,
     simulateEmailOpened,
     updateVideoMessage,

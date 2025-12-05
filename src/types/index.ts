@@ -48,6 +48,7 @@ export interface LoanScenario {
   id: string;
   name: string;
   clientName?: string;
+  trackingId?: string; // For view tracking when shared
   createdAt: string;
   updatedAt: string;
   inputs: LoanInputs;
