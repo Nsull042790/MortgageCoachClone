@@ -1,5 +1,5 @@
 import type { LoanType, LoanInputs, LoanCalculation, CreditScoreRange } from '../types';
-import { LOAN_TYPE_INFO } from '../types';
+import { LOAN_TYPE_INFO, DEFAULT_ARM_CONFIG, CURRENT_SOFR_RATE } from '../types';
 import { calculatePMI, getLPMIRateAdjustment } from './pmiRates';
 
 /**
@@ -110,6 +110,153 @@ export function getUSDAFees(loanAmount: number): { upfront: number; annualRate: 
 }
 
 /**
+ * Check if a loan type is an ARM
+ */
+export function isARMLoan(loanType: LoanType): boolean {
+  return loanType === 'arm51' || loanType === 'arm71' || loanType === 'arm101';
+}
+
+/**
+ * Get ARM configuration for a loan type
+ */
+export function getARMConfig(loanType: 'arm51' | 'arm71' | 'arm101') {
+  const config = DEFAULT_ARM_CONFIG[loanType];
+  const initialPeriodYears = LOAN_TYPE_INFO[loanType].initialPeriodYears || 5;
+
+  return {
+    ...config,
+    initialPeriodYears,
+    adjustmentPeriodMonths: 12, // Annual adjustments
+    floor: 0, // Minimum rate
+    expectedIndexRate: CURRENT_SOFR_RATE,
+  };
+}
+
+/**
+ * Calculate ARM rate after initial period
+ * New Rate = Index Rate + Margin, subject to caps
+ */
+export function calculateARMRateAdjustment(
+  currentRate: number,
+  initialRate: number,
+  indexRate: number,
+  margin: number,
+  initialCap: number,
+  periodicCap: number,
+  lifetimeCap: number,
+  isFirstAdjustment: boolean
+): number {
+  const fullyIndexedRate = indexRate + margin;
+  const maxRate = initialRate + lifetimeCap;
+  const cap = isFirstAdjustment ? initialCap : periodicCap;
+
+  // New rate is fully indexed rate, but capped by adjustment limits
+  let newRate = fullyIndexedRate;
+
+  // Apply periodic/initial cap
+  if (newRate > currentRate + cap) {
+    newRate = currentRate + cap;
+  }
+  if (newRate < currentRate - cap) {
+    newRate = currentRate - cap;
+  }
+
+  // Apply lifetime cap
+  if (newRate > maxRate) {
+    newRate = maxRate;
+  }
+
+  // Apply floor (can't go below 0)
+  if (newRate < 0) {
+    newRate = 0;
+  }
+
+  return newRate;
+}
+
+/**
+ * Calculate estimated total cost for ARM over loan life
+ * Uses projected rate adjustments
+ */
+export function calculateARMTotalCost(
+  loanAmount: number,
+  initialRate: number,
+  initialPeriodYears: number,
+  indexRate: number,
+  margin: number,
+  initialCap: number,
+  periodicCap: number,
+  lifetimeCap: number,
+  termYears: number = 30,
+  monthlyTaxes: number = 0,
+  monthlyInsurance: number = 0,
+  monthlyHOA: number = 0,
+  monthlyMI: number = 0
+): { totalCost: number; estimatedRateAfterAdjustment: number; estimatedPaymentAfterAdjustment: number; worstCasePayment: number } {
+  const termMonths = termYears * 12;
+  const initialPeriodMonths = initialPeriodYears * 12;
+
+  let totalCost = 0;
+  let balance = loanAmount;
+  let currentRate = initialRate;
+
+  // Calculate initial P&I payment
+  let monthlyPI = calculateMonthlyPI(balance, currentRate, termMonths);
+
+  // Track for reporting
+  let estimatedRateAfterAdjustment = initialRate;
+  let estimatedPaymentAfterAdjustment = monthlyPI;
+
+  for (let month = 1; month <= termMonths && balance > 0; month++) {
+    // Check if we need to adjust the rate (after initial period)
+    if (month > initialPeriodMonths && (month - initialPeriodMonths) % 12 === 1) {
+      const isFirstAdjustment = month === initialPeriodMonths + 1;
+      currentRate = calculateARMRateAdjustment(
+        currentRate,
+        initialRate,
+        indexRate,
+        margin,
+        initialCap,
+        periodicCap,
+        lifetimeCap,
+        isFirstAdjustment
+      );
+
+      // Recalculate payment with remaining balance and term
+      const remainingMonths = termMonths - month + 1;
+      monthlyPI = calculateMonthlyPI(balance, currentRate, remainingMonths);
+
+      // Capture first adjustment values
+      if (isFirstAdjustment) {
+        estimatedRateAfterAdjustment = currentRate;
+        estimatedPaymentAfterAdjustment = monthlyPI;
+      }
+    }
+
+    // Calculate interest and principal for this month
+    const monthlyRate = currentRate / 100 / 12;
+    const interest = balance * monthlyRate;
+    const principal = monthlyPI - interest;
+    balance -= principal;
+
+    // Add to total cost
+    totalCost += monthlyPI + monthlyTaxes + monthlyInsurance + monthlyHOA + monthlyMI;
+  }
+
+  // Calculate worst case payment (at lifetime cap)
+  const maxRate = initialRate + lifetimeCap;
+  const worstCasePI = calculateMonthlyPI(loanAmount, maxRate, termMonths);
+  const worstCasePayment = worstCasePI + monthlyTaxes + monthlyInsurance + monthlyHOA + monthlyMI;
+
+  return {
+    totalCost,
+    estimatedRateAfterAdjustment,
+    estimatedPaymentAfterAdjustment: estimatedPaymentAfterAdjustment + monthlyTaxes + monthlyInsurance + monthlyHOA + monthlyMI,
+    worstCasePayment,
+  };
+}
+
+/**
  * Calculate APR (Annual Percentage Rate)
  * APR accounts for fees by finding the rate that makes:
  * Net Loan Amount = Present Value of all payments
@@ -189,6 +336,10 @@ export function calculateLoan(inputs: LoanInputs, loanType: LoanType): LoanCalcu
   let monthlyMI = 0;
   let upfrontFees = 0;
 
+  // ARM-specific variables
+  let armDetails: LoanCalculation['armDetails'] = undefined;
+  const isARM = isARMLoan(loanType);
+
   switch (loanType) {
     case 'conventional30':
     case 'conventional15': {
@@ -241,6 +392,38 @@ export function calculateLoan(inputs: LoanInputs, loanType: LoanType): LoanCalcu
       monthlyMI = (loanAmount * (usdaFees.annualRate / 100)) / 12;
       break;
     }
+    case 'arm51':
+    case 'arm71':
+    case 'arm101': {
+      // ARM loans use conventional PMI rules
+      const pmiResult = calculatePMI(
+        loanAmount,
+        homePrice,
+        creditScore,
+        borrowerCount,
+        firstTimeHomeBuyer,
+        pmiOption
+      );
+
+      monthlyMI = pmiResult.monthlyPremium;
+      upfrontFees = pmiResult.upfrontPremium;
+
+      if (pmiResult.additionalLoanAmount > 0) {
+        loanAmount += pmiResult.additionalLoanAmount;
+      }
+
+      if (pmiResult.pmiType === 'lpmi') {
+        const lpmiAdjustment = getLPMIRateAdjustment(
+          homePrice,
+          loanAmount,
+          creditScore,
+          borrowerCount,
+          firstTimeHomeBuyer
+        );
+        interestRate += lpmiAdjustment;
+      }
+      break;
+    }
   }
 
   // Calculate P&I (after potential loan amount adjustment for financed PMI)
@@ -257,9 +440,43 @@ export function calculateLoan(inputs: LoanInputs, loanType: LoanType): LoanCalcu
   const estimatedClosingCosts = loanAmount * 0.03;
   const cashToClose = downPayment + upfrontFees + estimatedClosingCosts;
 
-  // Total cost over life of loan
-  const totalPayments = totalMonthly * termMonths;
-  const totalCost = totalPayments + downPayment + upfrontFees;
+  // Calculate total cost and ARM details
+  let totalCost: number;
+
+  if (isARM && (loanType === 'arm51' || loanType === 'arm71' || loanType === 'arm101')) {
+    // For ARM, calculate using projected rate adjustments
+    const armConfig = getARMConfig(loanType);
+    const armCalc = calculateARMTotalCost(
+      loanAmount,
+      interestRate,
+      armConfig.initialPeriodYears,
+      armConfig.expectedIndexRate,
+      armConfig.margin,
+      armConfig.initialCap,
+      armConfig.periodicCap,
+      armConfig.lifetimeCap,
+      termYears,
+      monthlyTaxes,
+      monthlyInsurance,
+      monthlyHOA,
+      monthlyMI
+    );
+
+    totalCost = armCalc.totalCost + downPayment + upfrontFees;
+
+    armDetails = {
+      initialRate: interestRate,
+      initialPeriodYears: armConfig.initialPeriodYears,
+      maxRate: interestRate + armConfig.lifetimeCap,
+      estimatedRateAfterAdjustment: armCalc.estimatedRateAfterAdjustment,
+      estimatedPaymentAfterAdjustment: armCalc.estimatedPaymentAfterAdjustment,
+      worstCasePayment: armCalc.worstCasePayment,
+    };
+  } else {
+    // Fixed rate - simple calculation
+    const totalPayments = totalMonthly * termMonths;
+    totalCost = totalPayments + downPayment + upfrontFees;
+  }
 
   // Calculate APR (includes P&I and MI in the payment, plus fees)
   const apr = calculateAPR(loanAmount, monthlyPI + monthlyMI, termMonths, upfrontFees, estimatedClosingCosts);
@@ -279,6 +496,8 @@ export function calculateLoan(inputs: LoanInputs, loanType: LoanType): LoanCalcu
     upfrontFees,
     cashToClose,
     totalCost,
+    isARM,
+    armDetails,
   };
 }
 

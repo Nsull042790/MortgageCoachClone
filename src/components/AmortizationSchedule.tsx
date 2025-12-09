@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useLoan } from '../context/LoanContext';
-import { formatCurrency, formatCurrencyWhole } from '../utils/mortgageCalculations';
+import { formatCurrency, formatCurrencyWhole, isARMLoan, getARMConfig, calculateARMRateAdjustment, calculateMonthlyPI } from '../utils/mortgageCalculations';
 import { LOAN_TYPE_INFO } from '../types';
+import type { LoanType } from '../types';
 import { TableCellsIcon, ChevronDownIcon, ChevronUpIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
 interface AmortizationRow {
@@ -13,20 +14,34 @@ interface AmortizationRow {
   balance: number;
   totalInterest: number;
   totalPrincipal: number;
+  rate?: number; // Interest rate for this month (for ARM tracking)
+  isRateChange?: boolean; // Flag if rate changed this month
 }
 
-// Generate amortization schedule
+// Generate amortization schedule (supports both fixed and ARM loans)
 function generateAmortizationSchedule(
   loanAmount: number,
   annualRate: number,
   termMonths: number,
   monthlyPMI: number,
-  pmiEndLtv: number = 80 // PMI typically ends at 80% LTV
+  pmiEndLtv: number = 80, // PMI typically ends at 80% LTV
+  loanType?: LoanType
 ): AmortizationRow[] {
   const schedule: AmortizationRow[] = [];
-  const monthlyRate = annualRate / 100 / 12;
+  const isARM = loanType ? isARMLoan(loanType) : false;
 
-  // Calculate monthly P&I payment
+  // Get ARM config if applicable
+  let armConfig: ReturnType<typeof getARMConfig> | null = null;
+  let initialPeriodMonths = 0;
+  if (isARM && (loanType === 'arm51' || loanType === 'arm71' || loanType === 'arm101')) {
+    armConfig = getARMConfig(loanType);
+    initialPeriodMonths = armConfig.initialPeriodYears * 12;
+  }
+
+  let currentRate = annualRate;
+  let monthlyRate = currentRate / 100 / 12;
+
+  // Calculate initial monthly P&I payment
   let monthlyPI: number;
   if (monthlyRate === 0) {
     monthlyPI = loanAmount / termMonths;
@@ -41,6 +56,29 @@ function generateAmortizationSchedule(
   const originalLoan = loanAmount;
 
   for (let month = 1; month <= termMonths && balance > 0; month++) {
+    let isRateChange = false;
+
+    // Check for ARM rate adjustment
+    if (isARM && armConfig && month > initialPeriodMonths && (month - initialPeriodMonths) % 12 === 1) {
+      const isFirstAdjustment = month === initialPeriodMonths + 1;
+      currentRate = calculateARMRateAdjustment(
+        currentRate,
+        annualRate, // initial rate
+        armConfig.expectedIndexRate,
+        armConfig.margin,
+        armConfig.initialCap,
+        armConfig.periodicCap,
+        armConfig.lifetimeCap,
+        isFirstAdjustment
+      );
+      monthlyRate = currentRate / 100 / 12;
+
+      // Recalculate payment with remaining balance and term
+      const remainingMonths = termMonths - month + 1;
+      monthlyPI = calculateMonthlyPI(balance, currentRate, remainingMonths);
+      isRateChange = true;
+    }
+
     const interest = balance * monthlyRate;
     let principal = monthlyPI - interest;
 
@@ -66,6 +104,8 @@ function generateAmortizationSchedule(
       balance: Math.max(0, balance),
       totalInterest,
       totalPrincipal,
+      rate: currentRate,
+      isRateChange,
     });
   }
 
@@ -90,9 +130,14 @@ export function AmortizationSchedule() {
       selectedCalc.loanAmount,
       selectedCalc.interestRate,
       selectedCalc.termMonths,
-      selectedCalc.monthlyMI
+      selectedCalc.monthlyMI,
+      80, // pmiEndLtv
+      selectedCalc.loanType
     );
   }, [selectedCalc]);
+
+  // Check if selected loan is an ARM
+  const isSelectedARM = selectedCalc ? isARMLoan(selectedCalc.loanType) : false;
 
   // Aggregate by year for yearly view
   const yearlySchedule = useMemo(() => {
@@ -105,6 +150,8 @@ export function AmortizationSchedule() {
       endingBalance: number;
       cumulativeInterest: number;
       cumulativePrincipal: number;
+      endingRate?: number;
+      hasRateChange?: boolean;
     }> = [];
 
     for (let y = 0; y < Math.ceil(schedule.length / 12); y++) {
@@ -124,6 +171,8 @@ export function AmortizationSchedule() {
         endingBalance: lastRow.balance,
         cumulativeInterest: lastRow.totalInterest,
         cumulativePrincipal: lastRow.totalPrincipal,
+        endingRate: lastRow.rate,
+        hasRateChange: yearRows.some(r => r.isRateChange),
       });
     }
 
@@ -137,26 +186,41 @@ export function AmortizationSchedule() {
     const pmiEndMonth = schedule.findIndex(r => r.pmi === 0 && schedule[0]?.pmi > 0);
     const halfwayMonth = schedule.findIndex(r => r.totalPrincipal >= selectedCalc?.loanAmount / 2);
     const totalInterest = schedule[schedule.length - 1]?.totalInterest || 0;
+    const firstRateChangeMonth = schedule.findIndex(r => r.isRateChange);
 
     return {
       pmiEndMonth: pmiEndMonth > 0 ? pmiEndMonth : null,
       halfwayMonth: halfwayMonth > 0 ? halfwayMonth : null,
       totalInterest,
       totalPayments: schedule.reduce((sum, r) => sum + r.payment, 0),
+      firstRateChangeMonth: firstRateChangeMonth > 0 ? firstRateChangeMonth + 1 : null, // +1 for display (1-indexed)
     };
   }, [schedule, selectedCalc]);
 
   // Export to CSV
   const handleExportCSV = () => {
-    const headers = ['Month', 'Payment', 'Principal', 'Interest', 'PMI', 'Balance'];
-    const rows = schedule.map(r => [
-      r.month,
-      r.payment.toFixed(2),
-      r.principal.toFixed(2),
-      r.interest.toFixed(2),
-      r.pmi.toFixed(2),
-      r.balance.toFixed(2),
-    ]);
+    const headers = isSelectedARM
+      ? ['Month', 'Rate', 'Payment', 'Principal', 'Interest', 'PMI', 'Balance']
+      : ['Month', 'Payment', 'Principal', 'Interest', 'PMI', 'Balance'];
+    const rows = schedule.map(r => isSelectedARM
+      ? [
+          r.month,
+          (r.rate || 0).toFixed(3),
+          r.payment.toFixed(2),
+          r.principal.toFixed(2),
+          r.interest.toFixed(2),
+          r.pmi.toFixed(2),
+          r.balance.toFixed(2),
+        ]
+      : [
+          r.month,
+          r.payment.toFixed(2),
+          r.principal.toFixed(2),
+          r.interest.toFixed(2),
+          r.pmi.toFixed(2),
+          r.balance.toFixed(2),
+        ]
+    );
 
     const csvContent = [headers, ...rows].map(r => r.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -285,6 +349,14 @@ export function AmortizationSchedule() {
                   </p>
                 </div>
               )}
+              {isSelectedARM && milestones.firstRateChangeMonth && (
+                <div className="bg-amber-50 rounded-lg p-4">
+                  <p className="text-xs text-amber-700">First Rate Adjustment</p>
+                  <p className="text-lg font-semibold text-amber-600">
+                    Month {milestones.firstRateChangeMonth}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -297,6 +369,9 @@ export function AmortizationSchedule() {
                     <th className="px-4 py-3 text-left font-medium text-gray-600">
                       {displayMode === 'yearly' ? 'Year' : 'Month'}
                     </th>
+                    {isSelectedARM && (
+                      <th className="px-4 py-3 text-right font-medium text-amber-600">Rate</th>
+                    )}
                     <th className="px-4 py-3 text-right font-medium text-gray-600">Payment</th>
                     <th className="px-4 py-3 text-right font-medium text-gray-600">Principal</th>
                     <th className="px-4 py-3 text-right font-medium text-gray-600">Interest</th>
@@ -309,8 +384,16 @@ export function AmortizationSchedule() {
                 <tbody className="divide-y divide-gray-100">
                   {displayMode === 'yearly' ? (
                     yearlySchedule.slice(0, yearsToShow).map((row, idx) => (
-                      <tr key={row.year} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
-                        <td className="px-4 py-2 font-medium text-gray-900">{row.year}</td>
+                      <tr key={row.year} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} ${row.hasRateChange ? 'ring-1 ring-amber-300' : ''}`}>
+                        <td className="px-4 py-2 font-medium text-gray-900">
+                          {row.year}
+                          {row.hasRateChange && <span className="ml-1 text-amber-500 text-xs">▲</span>}
+                        </td>
+                        {isSelectedARM && (
+                          <td className={`px-4 py-2 text-right ${row.hasRateChange ? 'text-amber-600 font-medium' : 'text-gray-600'}`}>
+                            {row.endingRate?.toFixed(2)}%
+                          </td>
+                        )}
                         <td className="px-4 py-2 text-right">{formatCurrency(row.totalPayment)}</td>
                         <td className="px-4 py-2 text-right text-green-600">{formatCurrency(row.totalPrincipal)}</td>
                         <td className="px-4 py-2 text-right" style={{ color: '#ce92c1' }}>
@@ -328,8 +411,16 @@ export function AmortizationSchedule() {
                     ))
                   ) : (
                     schedule.slice(0, yearsToShow * 12).map((row, idx) => (
-                      <tr key={row.month} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
-                        <td className="px-4 py-2 font-medium text-gray-900">{row.month}</td>
+                      <tr key={row.month} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} ${row.isRateChange ? 'ring-1 ring-amber-300 bg-amber-50' : ''}`}>
+                        <td className="px-4 py-2 font-medium text-gray-900">
+                          {row.month}
+                          {row.isRateChange && <span className="ml-1 text-amber-500 text-xs">▲</span>}
+                        </td>
+                        {isSelectedARM && (
+                          <td className={`px-4 py-2 text-right ${row.isRateChange ? 'text-amber-600 font-medium' : 'text-gray-600'}`}>
+                            {row.rate?.toFixed(2)}%
+                          </td>
+                        )}
                         <td className="px-4 py-2 text-right">{formatCurrency(row.payment)}</td>
                         <td className="px-4 py-2 text-right text-green-600">{formatCurrency(row.principal)}</td>
                         <td className="px-4 py-2 text-right" style={{ color: '#ce92c1' }}>

@@ -298,6 +298,16 @@ export async function generatePDF(
     }
     pdf.text(`${calc.interestRate.toFixed(3)}%`, cardX + cardWidth / 2, cardY, { align: 'center' });
 
+    // ARM details if applicable
+    if (calc.isARM && calc.armDetails) {
+      cardY += 3;
+      pdf.setFontSize(5);
+      pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
+      pdf.text(`Fixed ${calc.armDetails.initialPeriodYears}yrs, then adj.`, cardX + cardWidth / 2, cardY, { align: 'center' });
+      cardY += 2.5;
+      pdf.text(`Max: ${calc.armDetails.maxRate.toFixed(2)}%`, cardX + cardWidth / 2, cardY, { align: 'center' });
+    }
+
     // Total Monthly
     cardY += 6;
     if (isLowest) {

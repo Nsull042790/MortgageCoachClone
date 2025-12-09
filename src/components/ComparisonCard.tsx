@@ -17,7 +17,7 @@ function isLightColor(hex: string): boolean {
 }
 
 export function ComparisonCard({ calculation, isLowest }: ComparisonCardProps) {
-  const { loanType, interestRate, apr, totalMonthly, monthlyPI, monthlyMI, monthlyTaxes, monthlyInsurance, upfrontFees, cashToClose, totalCost } = calculation;
+  const { loanType, interestRate, apr, totalMonthly, monthlyPI, monthlyMI, monthlyTaxes, monthlyInsurance, upfrontFees, cashToClose, totalCost, isARM, armDetails } = calculation;
 
   const info = LOAN_TYPE_INFO[loanType];
   const headerBgColor = info.bgColor;
@@ -50,6 +50,11 @@ export function ComparisonCard({ calculation, isLowest }: ComparisonCardProps) {
         <h3 className="text-lg font-semibold">{info.name}</h3>
         <p className="text-3xl font-bold mt-1">{formatPercent(interestRate, 3)}</p>
         <p className="text-sm opacity-80 mt-0.5">{formatPercent(apr, 3)} APR</p>
+        {isARM && armDetails && (
+          <p className="text-xs opacity-70 mt-1">
+            Fixed for {armDetails.initialPeriodYears} years, then adjusts annually
+          </p>
+        )}
       </div>
 
       {/* Body */}
@@ -106,6 +111,33 @@ export function ComparisonCard({ calculation, isLowest }: ComparisonCardProps) {
             <span className="text-gray-900 font-medium">{formatCurrencyWhole(totalCost)}</span>
           </div>
         </div>
+
+        {/* ARM Rate Adjustment Info */}
+        {isARM && armDetails && (
+          <div className="space-y-2 text-sm border-t border-gray-100 pt-4 mt-4">
+            <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Rate Adjustment Projections</p>
+            <div className="flex justify-between">
+              <span className="text-gray-500">After Year {armDetails.initialPeriodYears}</span>
+              <span className="text-amber-600 font-medium">
+                ~{formatPercent(armDetails.estimatedRateAfterAdjustment, 2)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Est. Payment After</span>
+              <span className="text-amber-600 font-medium">
+                {formatCurrency(armDetails.estimatedPaymentAfterAdjustment)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Max Rate (lifetime)</span>
+              <span className="text-red-600 font-medium">{formatPercent(armDetails.maxRate, 2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Worst Case Payment</span>
+              <span className="text-red-600 font-medium">{formatCurrency(armDetails.worstCasePayment)}</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

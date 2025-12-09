@@ -15,7 +15,8 @@ export type RecommendationType =
   | 'time_horizon'
   | 'rate_timing'
   | 'fha_consideration'
-  | 'va_consideration';
+  | 'va_consideration'
+  | 'arm_consideration';
 
 export type RecommendationPriority = 'high' | 'medium' | 'low';
 
@@ -198,6 +199,22 @@ function findBestLoan(
       } else if (paymentIncreasePct > 35) {
         // Payment too high - not practical for most borrowers
         score -= 10;
+      }
+    }
+
+    // ARM SPECIFIC LOGIC
+    if (calc.isARM) {
+      if (timeHorizon <= (calc.armDetails?.initialPeriodYears || 5)) {
+        // Planning to move before rate adjusts - ARM is great
+        score += 10;
+        reasons.push('lower initial rate, moving before adjustment');
+      } else if (timeHorizon <= (calc.armDetails?.initialPeriodYears || 5) + 3) {
+        // Might be there during first adjustment - moderate benefit
+        score += 3;
+        reasons.push('lower initial rate');
+      } else {
+        // Long-term stay - ARM has more risk
+        score -= 8;
       }
     }
 
@@ -470,6 +487,50 @@ export function generateRecommendations(
           },
           details: '0% down payment option with no monthly mortgage insurance.',
           icon: 'shield',
+        });
+      }
+    }
+  }
+
+  // 9. ARM CONSIDERATION (for short-term buyers)
+  const armCalcs = calculations.filter(c => c.isARM);
+  const fixedCalc = calculations.find(c => c.loanType === 'conventional30');
+
+  if (armCalcs.length > 0 && fixedCalc) {
+    // Find the best ARM for the time horizon
+    const bestARM = armCalcs.find(c =>
+      c.armDetails && timeHorizon <= c.armDetails.initialPeriodYears
+    ) || armCalcs[0];
+
+    if (bestARM && bestARM.armDetails) {
+      const monthlySavings = fixedCalc.totalMonthly - bestARM.totalMonthly;
+
+      if (timeHorizon <= bestARM.armDetails.initialPeriodYears && monthlySavings > 50) {
+        // Short-term buyer - ARM is a great fit
+        recommendations.push({
+          id: 'arm_short_term',
+          type: 'arm_consideration',
+          priority: 'high',
+          title: `${LOAN_TYPE_INFO[bestARM.loanType].name} Could Save You`,
+          message: `Planning to move in ${timeHorizon} years? A ${bestARM.armDetails.initialPeriodYears}/1 ARM offers a lower rate during your ownership period.`,
+          savings: {
+            monthly: monthlySavings,
+            total: monthlySavings * timeHorizon * 12,
+          },
+          details: `Rate stays fixed at ${bestARM.interestRate.toFixed(3)}% for ${bestARM.armDetails.initialPeriodYears} years before adjusting.`,
+          icon: 'clock',
+        });
+      } else if (timeHorizon > 10 && armCalcs.length > 0) {
+        // Long-term buyer - warn about ARM risks
+        const worstCaseIncrease = bestARM.armDetails.worstCasePayment - bestARM.totalMonthly;
+        recommendations.push({
+          id: 'arm_warning',
+          type: 'arm_consideration',
+          priority: 'low',
+          title: 'ARM Rate Risk',
+          message: `With a ${timeHorizon}-year time horizon, ARM rate adjustments could significantly increase your payment.`,
+          details: `Worst case: payment could increase by ${worstCaseIncrease > 0 ? '$' + worstCaseIncrease.toFixed(0) + '/mo' : 'N/A'} at lifetime cap.`,
+          icon: 'alert',
         });
       }
     }
