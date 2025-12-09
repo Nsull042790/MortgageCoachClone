@@ -106,7 +106,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
                 )}
                 <p className="text-sm text-gray-500">
                   {isClientView ? 'Prepared specially for you' : 'Compare up to 4 loan products side-by-side'}
-                  {!isClientView && <span className="ml-2 text-xs text-gray-400">v1.4.0</span>}
+                  {!isClientView && <span className="ml-2 text-xs text-gray-400">v1.4.1</span>}
                 </p>
               </div>
             </div>
