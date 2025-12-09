@@ -16,7 +16,8 @@ export type RecommendationType =
   | 'rate_timing'
   | 'fha_consideration'
   | 'va_consideration'
-  | 'arm_consideration';
+  | 'arm_consideration'
+  | 'wealth_building';
 
 export type RecommendationPriority = 'high' | 'medium' | 'low';
 
@@ -130,6 +131,102 @@ function calculateDownPaymentBreakEven(
 ): number {
   if (monthlyPMISavings <= 0) return Infinity;
   return Math.ceil(extraDownPayment / monthlyPMISavings);
+}
+
+// Calculate future value of regular monthly investments (compound interest)
+// FV = PMT × [((1 + r)^n - 1) / r]
+// where r = monthly rate, n = total months
+function calculateInvestmentGrowth(
+  monthlyContribution: number,
+  annualReturnRate: number,
+  years: number
+): number {
+  const monthlyRate = annualReturnRate / 100 / 12;
+  const totalMonths = years * 12;
+
+  if (monthlyRate === 0) return monthlyContribution * totalMonths;
+
+  const futureValue = monthlyContribution *
+    ((Math.pow(1 + monthlyRate, totalMonths) - 1) / monthlyRate);
+
+  return futureValue;
+}
+
+// Calculate total interest saved by choosing shorter term loan
+function calculateInterestSavings(
+  shorterTermCalc: LoanCalculation,
+  longerTermCalc: LoanCalculation
+): number {
+  // Total interest = (monthly PI × term months) - principal
+  const shorterInterest = (shorterTermCalc.monthlyPI * shorterTermCalc.termMonths) - shorterTermCalc.loanAmount;
+  const longerInterest = (longerTermCalc.monthlyPI * longerTermCalc.termMonths) - longerTermCalc.loanAmount;
+
+  return longerInterest - shorterInterest;
+}
+
+// Wealth building comparison: invest the payment difference vs pay off faster
+interface WealthBuildingAnalysis {
+  monthlyDifference: number;           // Amount saved with lower payment
+  investmentGrowth: number;            // Future value of investing the difference
+  interestSavings: number;             // Interest saved with higher payment/shorter term
+  netWealthDifference: number;         // Investment growth - interest savings
+  investingWins: boolean;              // True if investing the difference builds more wealth
+  breakEvenReturnRate: number;         // Return rate where both strategies equal out
+  timeHorizon: number;
+}
+
+function calculateWealthBuildingComparison(
+  lowerPaymentCalc: LoanCalculation,   // e.g., 30-year
+  higherPaymentCalc: LoanCalculation,  // e.g., 15-year
+  assumedReturnRate: number = 7,       // Historical S&P 500 average
+  timeHorizonYears: number = 30
+): WealthBuildingAnalysis {
+  const monthlyDifference = higherPaymentCalc.totalMonthly - lowerPaymentCalc.totalMonthly;
+
+  // Calculate investment growth over the longer term
+  const investmentGrowth = calculateInvestmentGrowth(
+    monthlyDifference,
+    assumedReturnRate,
+    timeHorizonYears
+  );
+
+  // Calculate interest savings from shorter term
+  const interestSavings = calculateInterestSavings(higherPaymentCalc, lowerPaymentCalc);
+
+  // Net wealth difference (positive = investing wins)
+  const netWealthDifference = investmentGrowth - interestSavings;
+
+  // Find break-even return rate (binary search)
+  let lowRate = 0;
+  let highRate = 20;
+  let breakEvenRate = 7;
+
+  for (let i = 0; i < 20; i++) {
+    const midRate = (lowRate + highRate) / 2;
+    const growthAtMid = calculateInvestmentGrowth(monthlyDifference, midRate, timeHorizonYears);
+
+    if (Math.abs(growthAtMid - interestSavings) < 100) {
+      breakEvenRate = midRate;
+      break;
+    }
+
+    if (growthAtMid < interestSavings) {
+      lowRate = midRate;
+    } else {
+      highRate = midRate;
+    }
+    breakEvenRate = midRate;
+  }
+
+  return {
+    monthlyDifference,
+    investmentGrowth,
+    interestSavings,
+    netWealthDifference,
+    investingWins: netWealthDifference > 0,
+    breakEvenReturnRate: breakEvenRate,
+    timeHorizon: timeHorizonYears,
+  };
 }
 
 // Find the best loan option
@@ -531,6 +628,53 @@ export function generateRecommendations(
           message: `With a ${timeHorizon}-year time horizon, ARM rate adjustments could significantly increase your payment.`,
           details: `Worst case: payment could increase by ${worstCaseIncrease > 0 ? '$' + worstCaseIncrease.toFixed(0) + '/mo' : 'N/A'} at lifetime cap.`,
           icon: 'alert',
+        });
+      }
+    }
+  }
+
+  // 10. WEALTH BUILDING COMPARISON (15-year vs 30-year opportunity cost)
+  const conv30 = calculations.find(c => c.loanType === 'conventional30');
+  const conv15 = calculations.find(c => c.loanType === 'conventional15');
+
+  if (conv30 && conv15 && conv15.totalMonthly > conv30.totalMonthly) {
+    const analysis = calculateWealthBuildingComparison(conv30, conv15, 7, 30);
+
+    // Only show if the payment difference is significant (at least $200/mo)
+    if (analysis.monthlyDifference >= 200) {
+      const investmentGrowthK = Math.round(analysis.investmentGrowth / 1000);
+      const interestSavingsK = Math.round(analysis.interestSavings / 1000);
+
+      if (analysis.investingWins) {
+        // Investing the difference wins
+        recommendations.push({
+          id: 'wealth_invest',
+          type: 'wealth_building',
+          priority: 'medium',
+          title: 'Invest the Difference?',
+          message: `The 30yr frees up $${Math.round(analysis.monthlyDifference)}/mo. Invested at 7%, that's $${investmentGrowthK}k over 30 years vs $${interestSavingsK}k interest savings on 15yr.`,
+          details: `Break-even return rate: ${analysis.breakEvenReturnRate.toFixed(1)}%. If you can earn above this in investments, the 30yr + investing wins.`,
+          savings: {
+            monthly: analysis.monthlyDifference,
+            total: analysis.netWealthDifference,
+          },
+          action: 'Consider your investment discipline and risk tolerance. The 30yr requires consistently investing the savings.',
+          icon: 'chart',
+        });
+      } else {
+        // Paying off faster wins (lower return rate needed)
+        recommendations.push({
+          id: 'wealth_payoff',
+          type: 'wealth_building',
+          priority: 'medium',
+          title: 'Pay Off Faster?',
+          message: `The 15yr saves $${interestSavingsK}k in interest. You'd need ${analysis.breakEvenReturnRate.toFixed(1)}%+ returns to beat this by investing the $${Math.round(analysis.monthlyDifference)}/mo difference.`,
+          details: `At 7% returns, investing would grow to $${investmentGrowthK}k. The guaranteed interest savings may be more attractive.`,
+          savings: {
+            total: analysis.interestSavings,
+          },
+          action: 'If you prefer guaranteed savings over market returns, the 15yr provides certain interest savings.',
+          icon: 'trending-up',
         });
       }
     }
