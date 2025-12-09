@@ -12,6 +12,7 @@ import {
   Cell,
   Legend,
 } from 'recharts';
+import { ChevronDownIcon, ChevronUpIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 import { useLoan } from '../context/LoanContext';
 import { LOAN_TYPE_INFO } from '../types';
 import type { LoanCalculation } from '../types';
@@ -85,6 +86,7 @@ export function PaymentCharts() {
   const { currentScenario } = useLoan();
   const { calculations } = currentScenario;
   const [selectedLoanIndex, setSelectedLoanIndex] = useState(0);
+  const [isExpanded, setIsExpanded] = useState(true); // Start expanded
 
   if (calculations.length === 0) {
     return null;
@@ -113,11 +115,47 @@ export function PaymentCharts() {
     percent: item.value / selectedCalc.totalMonthly,
   }));
 
-  return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-6">Payment Analysis</h2>
+  // Find lowest payment for header display
+  const lowestMonthly = Math.min(...calculations.map(c => c.totalMonthly));
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+  return (
+    <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+      {/* Collapsible Header */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="p-2 rounded-lg"
+            style={{ backgroundColor: '#96daf8' }}
+          >
+            <ChartBarIcon className="w-5 h-5 text-gray-800" />
+          </div>
+          <div className="text-left">
+            <h3 className="font-semibold text-gray-900">Payment Analysis</h3>
+            <p className="text-sm text-gray-500">Compare monthly payments across loan types</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p className="text-lg font-semibold" style={{ color: '#0d173c' }}>
+              {formatCurrency(lowestMonthly)}
+            </p>
+            <p className="text-xs text-gray-500">Lowest Payment</p>
+          </div>
+          {isExpanded ? (
+            <ChevronUpIcon className="w-5 h-5 text-gray-400" />
+          ) : (
+            <ChevronDownIcon className="w-5 h-5 text-gray-400" />
+          )}
+        </div>
+      </button>
+
+      {/* Expanded Content */}
+      {isExpanded && (
+        <div className="px-6 pb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Bar Chart - Monthly Payment Comparison */}
         <div>
           <h3 className="text-sm font-medium text-gray-700 mb-4">Monthly Payment Comparison</h3>
@@ -220,7 +258,9 @@ export function PaymentCharts() {
             </p>
           </div>
         </div>
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
