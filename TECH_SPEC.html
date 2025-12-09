@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loan Scenario Comparison Tool - Technical Specification</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      font-size: 11pt;
+    }
+    h1 {
+      color: #0d173c;
+      border-bottom: 3px solid #0d173c;
+      padding-bottom: 10px;
+      font-size: 24pt;
+    }
+    h2 {
+      color: #0d173c;
+      border-bottom: 2px solid #96daf8;
+      padding-bottom: 8px;
+      margin-top: 30px;
+      font-size: 16pt;
+      page-break-after: avoid;
+    }
+    h3 {
+      color: #0d173c;
+      margin-top: 20px;
+      font-size: 13pt;
+      page-break-after: avoid;
+    }
+    h4 {
+      color: #333;
+      margin-top: 15px;
+      font-size: 11pt;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 15px 0;
+      font-size: 10pt;
+      page-break-inside: avoid;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    th {
+      background-color: #0d173c;
+      color: white;
+    }
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    code {
+      background-color: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 10pt;
+    }
+    pre {
+      background-color: #f4f4f4;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+      font-size: 9pt;
+      page-break-inside: avoid;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+    }
+    .header-info {
+      background: linear-gradient(135deg, #0d173c 0%, #1a2a5e 100%);
+      color: white;
+      padding: 30px;
+      margin: -40px -20px 30px -20px;
+      text-align: center;
+    }
+    .header-info h1 {
+      color: white;
+      border: none;
+      margin: 0;
+    }
+    .header-info p {
+      margin: 5px 0;
+      opacity: 0.9;
+    }
+    .toc {
+      background: #f9f9f9;
+      padding: 20px;
+      border-radius: 5px;
+      margin-bottom: 30px;
+    }
+    .toc h2 {
+      margin-top: 0;
+      border: none;
+    }
+    .toc ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    .toc li {
+      margin: 8px 0;
+    }
+    .toc a {
+      color: #0d173c;
+      text-decoration: none;
+    }
+    .toc a:hover {
+      text-decoration: underline;
+    }
+    .checklist {
+      list-style: none;
+      padding-left: 0;
+    }
+    .checklist li {
+      position: relative;
+      padding-left: 30px;
+      margin: 8px 0;
+    }
+    .checklist li::before {
+      content: "☐";
+      position: absolute;
+      left: 0;
+      font-size: 14pt;
+    }
+    .highlight-box {
+      background: #fff8e1;
+      border-left: 4px solid #ffd159;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    .brand-colors {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .color-swatch {
+      width: 60px;
+      height: 60px;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 8pt;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+    .footer {
+      margin-top: 50px;
+      padding-top: 20px;
+      border-top: 2px solid #ddd;
+      text-align: center;
+      color: #666;
+      font-size: 9pt;
+    }
+    @media print {
+      body {
+        padding: 0;
+        font-size: 10pt;
+      }
+      .header-info {
+        margin: 0 0 20px 0;
+        padding: 20px;
+      }
+      h2 {
+        page-break-before: auto;
+      }
+      .no-break {
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header-info">
+  <h1>Loan Scenario Comparison Tool</h1>
+  <p><strong>Technical Specification</strong></p>
+  <p>Version 1.1.3 | December 2024</p>
+  <p>Prepared for Luminate Bank (NMLS 1281698)</p>
+</div>
+
+<div class="toc">
+  <h2>Table of Contents</h2>
+  <ul>
+    <li>1. <a href="#summary">Executive Summary</a></li>
+    <li>2. <a href="#stack">Technology Stack</a></li>
+    <li>3. <a href="#features">Features Overview</a></li>
+    <li>4. <a href="#calculations">Core Calculations</a></li>
+    <li>5. <a href="#models">Data Models</a></li>
+    <li>6. <a href="#architecture">Component Architecture</a></li>
+    <li>7. <a href="#hubspot">HubSpot Launch Checklist</a></li>
+    <li>8. <a href="#security">Security Considerations</a></li>
+    <li>9. <a href="#performance">Performance Specifications</a></li>
+  </ul>
+</div>
+
+<h2 id="summary">1. Executive Summary</h2>
+
+<p>The Loan Scenario Comparison Tool is a React-based web application that enables loan officers to create, compare, and share mortgage loan scenarios with clients. It provides real-time calculations for multiple loan types, AI-powered recommendations, and professional PDF exports.</p>
+
+<h3>Key Capabilities</h3>
+<ul>
+  <li>Compare up to 4 loan products side-by-side</li>
+  <li>Real-time mortgage calculations with PMI, MIP, and funding fees</li>
+  <li>AI-powered loan recommendations based on borrower profile</li>
+  <li>Shareable client view with unique URLs</li>
+  <li>PDF export with branding and compliance</li>
+  <li>Vimeo video integration for personalized messages</li>
+  <li>Local storage for saved scenarios</li>
+</ul>
+
+<h2 id="stack">2. Technology Stack</h2>
+
+<h3>Frontend Framework</h3>
+<table>
+  <tr><th>Technology</th><th>Version</th><th>Purpose</th></tr>
+  <tr><td>React</td><td>19.2.0</td><td>UI component library</td></tr>
+  <tr><td>TypeScript</td><td>5.9.3</td><td>Type-safe JavaScript</td></tr>
+  <tr><td>Vite</td><td>7.2.4</td><td>Build tool and dev server</td></tr>
+  <tr><td>Tailwind CSS</td><td>4.1.17</td><td>Utility-first CSS framework</td></tr>
+</table>
+
+<h3>Key Libraries</h3>
+<table>
+  <tr><th>Library</th><th>Version</th><th>Purpose</th></tr>
+  <tr><td>jsPDF</td><td>3.0.4</td><td>PDF generation</td></tr>
+  <tr><td>html2canvas</td><td>1.4.1</td><td>DOM to canvas rendering</td></tr>
+  <tr><td>Recharts</td><td>3.5.1</td><td>Data visualization charts</td></tr>
+  <tr><td>@heroicons/react</td><td>2.2.0</td><td>Icon library</td></tr>
+  <tr><td>uuid</td><td>13.0.0</td><td>Unique ID generation</td></tr>
+</table>
+
+<h2 id="features">3. Features Overview</h2>
+
+<h3>3.1 Loan Input Configuration</h3>
+<ul>
+  <li><strong>Home Price</strong> - Purchase price input with currency formatting</li>
+  <li><strong>Down Payment</strong> - Amount or percentage toggle</li>
+  <li><strong>Credit Score</strong> - 9 credit score ranges (760+ to &lt;620)</li>
+  <li><strong>Property Taxes</strong> - Annual tax amount</li>
+  <li><strong>Homeowner's Insurance</strong> - Annual premium</li>
+  <li><strong>HOA Fees</strong> - Monthly association fees</li>
+  <li><strong>Borrower Count</strong> - Single or multiple borrowers</li>
+  <li><strong>First-Time Homebuyer</strong> - Toggle for special programs</li>
+  <li><strong>PMI Option</strong> - BPMI, LPMI, Single Premium (PIF/Financed)</li>
+</ul>
+
+<h3>3.2 Loan Types Supported</h3>
+<table>
+  <tr><th>Loan Type</th><th>Term</th><th>Key Features</th></tr>
+  <tr><td>Conventional 30-Year</td><td>360 months</td><td>PMI if LTV > 80%</td></tr>
+  <tr><td>Conventional 15-Year</td><td>180 months</td><td>Lower rate, faster equity</td></tr>
+  <tr><td>FHA 30-Year</td><td>360 months</td><td>1.75% upfront MIP + annual MIP</td></tr>
+  <tr><td>VA 30-Year</td><td>360 months</td><td>Funding fee, no monthly MI</td></tr>
+  <tr><td>USDA 30-Year</td><td>360 months</td><td>1% upfront + 0.35% annual fee</td></tr>
+</table>
+
+<h3>3.3 AI Recommendations Engine</h3>
+<ul>
+  <li><strong>Best Loan Picker</strong> - Scores loans based on time horizon and affordability</li>
+  <li><strong>Credit Score Alerts</strong> - Identifies threshold improvements</li>
+  <li><strong>Down Payment Optimization</strong> - PMI elimination analysis</li>
+  <li><strong>PMI Strategy</strong> - Monthly vs Single Premium recommendations</li>
+  <li><strong>Affordability Check</strong> - DTI ratio warnings (43% threshold)</li>
+  <li><strong>Time Horizon Recommendations</strong> - 30-year vs 15-year guidance</li>
+  <li><strong>FHA/VA Consideration</strong> - Program eligibility suggestions</li>
+</ul>
+
+<h3>3.4 Additional Features</h3>
+<ul>
+  <li>Payment Analysis Charts (pie charts, bar charts)</li>
+  <li>Rate Simulator (+/- 2% impact analysis)</li>
+  <li>Closing Costs Breakdown with title insurance</li>
+  <li>Amortization Schedule with CSV export</li>
+  <li>Client Sharing with unique URLs</li>
+  <li>Vimeo Video Messages</li>
+  <li>Professional PDF Export</li>
+  <li>Saved Scenarios (local storage)</li>
+</ul>
+
+<h2 id="calculations">4. Core Calculations</h2>
+
+<h3>4.1 Monthly Principal & Interest (P&I)</h3>
+<div class="highlight-box">
+  <strong>Formula:</strong> M = P × [r(1+r)<sup>n</sup>] / [(1+r)<sup>n</sup> - 1]<br><br>
+  <strong>Where:</strong><br>
+  M = Monthly payment<br>
+  P = Principal (loan amount)<br>
+  r = Monthly interest rate (annual rate / 12 / 100)<br>
+  n = Number of payments (term in months)
+</div>
+
+<h3>4.2 Private Mortgage Insurance (PMI) Rates</h3>
+<p>PMI required when LTV > 80% for conventional loans:</p>
+<table>
+  <tr><th>Credit Score</th><th>80-85% LTV</th><th>85-90% LTV</th><th>90-95% LTV</th><th>95%+ LTV</th></tr>
+  <tr><td>760+</td><td>0.30%</td><td>0.38%</td><td>0.52%</td><td>0.78%</td></tr>
+  <tr><td>740-759</td><td>0.35%</td><td>0.44%</td><td>0.58%</td><td>0.85%</td></tr>
+  <tr><td>720-739</td><td>0.40%</td><td>0.50%</td><td>0.65%</td><td>0.92%</td></tr>
+  <tr><td>700-719</td><td>0.50%</td><td>0.60%</td><td>0.78%</td><td>1.05%</td></tr>
+  <tr><td>680-699</td><td>0.60%</td><td>0.75%</td><td>0.95%</td><td>1.25%</td></tr>
+  <tr><td>660-679</td><td>0.75%</td><td>0.95%</td><td>1.15%</td><td>1.45%</td></tr>
+  <tr><td>640-659</td><td>0.90%</td><td>1.10%</td><td>1.35%</td><td>1.65%</td></tr>
+  <tr><td>620-639</td><td>1.05%</td><td>1.25%</td><td>1.50%</td><td>1.85%</td></tr>
+  <tr><td>&lt;620</td><td>1.20%</td><td>1.45%</td><td>1.75%</td><td>2.10%</td></tr>
+</table>
+
+<h3>4.3 FHA Mortgage Insurance Premium (MIP)</h3>
+<div class="highlight-box">
+  <strong>Upfront MIP:</strong> Loan Amount × 1.75%<br><br>
+  <strong>Annual MIP (loans > 15 years):</strong><br>
+  • LTV ≤ 90%: 0.50% (loans ≤ $726,200) or 0.70% (larger loans)<br>
+  • LTV > 90%: 0.55% (loans ≤ $726,200) or 0.75% (larger loans)
+</div>
+
+<h3>4.4 VA Funding Fee</h3>
+<table>
+  <tr><th>Down Payment</th><th>First Use</th><th>Subsequent Use</th></tr>
+  <tr><td>&lt; 5%</td><td>2.15%</td><td>3.30%</td></tr>
+  <tr><td>5-9.99%</td><td>1.50%</td><td>1.50%</td></tr>
+  <tr><td>≥ 10%</td><td>1.25%</td><td>1.25%</td></tr>
+</table>
+
+<h3>4.5 USDA Fees</h3>
+<div class="highlight-box">
+  <strong>Upfront Guarantee Fee:</strong> Loan Amount × 1.00%<br>
+  <strong>Annual Fee:</strong> Loan Amount × 0.35%
+</div>
+
+<h3>4.6 AI Best Loan Scoring Algorithm</h3>
+<table>
+  <tr><th>Time Horizon</th><th>Monthly Weight</th><th>Total Cost Weight</th><th>Cash to Close Weight</th></tr>
+  <tr><td>≤ 5 years</td><td>60%</td><td>15%</td><td>25%</td></tr>
+  <tr><td>5-10 years</td><td>50%</td><td>30%</td><td>20%</td></tr>
+  <tr><td>10+ years</td><td>45%</td><td>35%</td><td>20%</td></tr>
+</table>
+<p><strong>Affordability Penalties:</strong></p>
+<ul>
+  <li>Payment 10-20% higher than lowest: -8 points</li>
+  <li>Payment 20-30% higher: -15 points</li>
+  <li>Payment 30%+ higher: -25 points</li>
+</ul>
+
+<h3>4.7 Debt-to-Income Ratio (DTI)</h3>
+<div class="highlight-box">
+  <strong>Formula:</strong> DTI = ((Monthly Mortgage + Other Debts) / Gross Monthly Income) × 100<br><br>
+  <strong>Thresholds:</strong><br>
+  • > 36%: Caution<br>
+  • > 43%: Warning (exceeds conventional limit)<br>
+  • > 50%: Critical (exceeds FHA limit)
+</div>
+
+<h2 id="models">5. Data Models</h2>
+
+<h3>LoanInputs Interface</h3>
+<pre><code>interface LoanInputs {
+  homePrice: number;
+  downPayment: number;
+  creditScore: CreditScoreRange;
+  annualTaxes: number;
+  annualInsurance: number;
+  monthlyHOA: number;
+  interestRates: Record&lt;LoanType, number&gt;;
+  borrowerCount: 'single' | 'multi';
+  firstTimeHomeBuyer: boolean;
+  pmiOption: 'bpmi' | 'lpmi' | 'singlePIF' | 'singleFin' | 'none';
+  timeHorizon?: number;
+  monthlyIncome?: number;
+  monthlyDebts?: number;
+  isVeteran?: boolean;
+  isRural?: boolean;
+}</code></pre>
+
+<h3>LoanCalculation Interface</h3>
+<pre><code>interface LoanCalculation {
+  loanType: LoanType;
+  loanAmount: number;
+  interestRate: number;
+  apr: number;
+  termMonths: number;
+  monthlyPI: number;
+  monthlyMI: number;
+  monthlyTaxes: number;
+  monthlyInsurance: number;
+  monthlyHOA: number;
+  totalMonthly: number;
+  upfrontFees: number;
+  cashToClose: number;
+  totalCost: number;
+}</code></pre>
+
+<h2 id="architecture">6. Component Architecture</h2>
+<pre><code>App.tsx
+├── LoanProvider (Context)
+├── Header
+│   ├── PDFOptionsModal
+│   └── ShareModal
+├── SavedScenariosSidebar
+├── ClientNameInput
+├── LoanInputs
+├── InterestRates
+├── LoanTypeSelector
+├── ComparisonGrid
+│   └── ComparisonCard (×4)
+├── AIRecommendations
+├── PaymentCharts
+├── RateSimulator
+├── ClosingCostsBreakdown
+├── AmortizationSchedule
+├── Compliance Footer
+└── VideoWidget</code></pre>
+
+<h2 id="hubspot">7. HubSpot Launch Checklist (500 Users)</h2>
+
+<h3>Phase 1: Infrastructure Setup</h3>
+<ul class="checklist">
+  <li>Select hosting platform (Vercel, Netlify, AWS, or HubSpot CMS)</li>
+  <li>Configure custom domain (e.g., loans.luminatebank.com)</li>
+  <li>SSL certificate - Ensure HTTPS for all traffic</li>
+  <li>CDN configuration for global performance</li>
+  <li>Environment variables for production API keys</li>
+</ul>
+
+<h3>Phase 2: Backend Services (Required)</h3>
+<ul class="checklist">
+  <li>Authentication system (Auth0, Firebase Auth, or custom)</li>
+  <li>User roles: Loan Officer, Manager, Admin</li>
+  <li>SSO integration if using enterprise identity provider</li>
+  <li>Database selection (PostgreSQL, MongoDB, or Firestore)</li>
+  <li>API layer (Node.js + Express, Next.js, or AWS Lambda)</li>
+  <li>Data migration plan from localStorage to cloud</li>
+</ul>
+
+<h3>Phase 3: Scalability</h3>
+<ul class="checklist">
+  <li>Expected concurrent users: ~50-100 (10-20% of 500)</li>
+  <li>Expected scenarios: ~5,000-10,000 (10-20 per user)</li>
+  <li>Database capacity: Plan for 50GB+ with growth</li>
+  <li>API rate limiting to prevent abuse</li>
+  <li>Caching layer (Redis) for frequent queries</li>
+  <li>Load testing with 100 concurrent users</li>
+</ul>
+
+<h3>Phase 4: Security & Compliance</h3>
+<ul class="checklist">
+  <li>Input validation - Sanitize all user inputs</li>
+  <li>CSRF tokens for API mutations</li>
+  <li>Content Security Policy headers</li>
+  <li>Rate limiting to prevent brute force</li>
+  <li>Audit logging for compliance</li>
+  <li>Data encryption at rest and in transit</li>
+  <li>Privacy policy update for app usage</li>
+  <li>NMLS disclosure (already in footer)</li>
+  <li>Equal Housing Opportunity (already in footer)</li>
+</ul>
+
+<h3>Phase 5: HubSpot Integration</h3>
+<ul class="checklist">
+  <li>HubSpot tracking code in app</li>
+  <li>Form integration for lead capture</li>
+  <li>Workflow triggers for new leads</li>
+  <li>Contact creation when client views shared link</li>
+  <li>Custom CRM properties (Scenario ID, Loan Types, etc.)</li>
+  <li>Email templates for scenario sharing</li>
+  <li>Custom reports and dashboards</li>
+</ul>
+
+<h3>Phase 6: Training & Documentation</h3>
+<ul class="checklist">
+  <li>User guide for creating/sharing scenarios</li>
+  <li>Video tutorials with screen recordings</li>
+  <li>FAQ document for common questions</li>
+  <li>Admin training for configuration</li>
+  <li>LO training sessions for features</li>
+  <li>Support escalation process</li>
+</ul>
+
+<h3>Phase 7: Monitoring & Maintenance</h3>
+<ul class="checklist">
+  <li>Uptime monitoring (Pingdom, UptimeRobot)</li>
+  <li>Error tracking (Sentry, LogRocket)</li>
+  <li>Performance monitoring (Core Web Vitals)</li>
+  <li>Usage analytics (Google Analytics or Mixpanel)</li>
+  <li>Daily database backups</li>
+  <li>Deployment pipeline for updates</li>
+  <li>Process for updating default rates</li>
+</ul>
+
+<h2 id="security">8. Security Considerations</h2>
+
+<h3>Current Implementation</h3>
+<ul>
+  <li>Client-side only (no server)</li>
+  <li>LocalStorage for persistence (browser-specific)</li>
+  <li>Base64 encoding for shareable URLs (not encryption)</li>
+  <li>No authentication (single user per browser)</li>
+</ul>
+
+<h3>Production Recommendations</h3>
+<ol>
+  <li>Add authentication for multi-user support</li>
+  <li>Server-side storage for data persistence</li>
+  <li>Encrypt sensitive data (income, debts)</li>
+  <li>Implement rate limiting on API endpoints</li>
+  <li>Add audit logging for compliance</li>
+  <li>Regular security audits and penetration testing</li>
+</ol>
+
+<h2 id="performance">9. Performance Specifications</h2>
+
+<h3>Current Bundle Size</h3>
+<table>
+  <tr><th>Asset</th><th>Size</th><th>Gzipped</th></tr>
+  <tr><td>Main JS</td><td>1,093 KB</td><td>332 KB</td></tr>
+  <tr><td>CSS</td><td>34 KB</td><td>6.8 KB</td></tr>
+  <tr><td>html2canvas</td><td>201 KB</td><td>47 KB</td></tr>
+  <tr><td>jsPDF</td><td>159 KB</td><td>53 KB</td></tr>
+</table>
+
+<h3>Target Performance Metrics</h3>
+<table>
+  <tr><th>Metric</th><th>Target</th><th>Current</th></tr>
+  <tr><td>First Contentful Paint</td><td>&lt; 1.5s</td><td>~1.2s</td></tr>
+  <tr><td>Time to Interactive</td><td>&lt; 3.0s</td><td>~2.5s</td></tr>
+  <tr><td>Lighthouse Score</td><td>&gt; 90</td><td>~85</td></tr>
+</table>
+
+<h3>Brand Colors</h3>
+<div class="brand-colors">
+  <div class="color-swatch" style="background:#0d173c;">Navy<br>#0d173c</div>
+  <div class="color-swatch" style="background:#96daf8; color:#333;">Light Blue<br>#96daf8</div>
+  <div class="color-swatch" style="background:#ce92c1;">Pink<br>#ce92c1</div>
+  <div class="color-swatch" style="background:#967db9;">Purple<br>#967db9</div>
+  <div class="color-swatch" style="background:#ffd159; color:#333;">Gold<br>#ffd159</div>
+</div>
+
+<div class="footer">
+  <p>Document prepared for Luminate Bank internal use.</p>
+  <p>&copy; 2024 Luminate Bank. All rights reserved. Member FDIC. Equal Housing Opportunity Lender.</p>
+  <p>NMLS 1281698 | 2523 S. Wayzata Blvd., Suite 100, Minneapolis, MN 55405 | (952) 939-7200</p>
+</div>
+
+</body>
+</html>
