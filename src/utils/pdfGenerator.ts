@@ -284,11 +284,7 @@ export async function generatePDF(
     pdf.text(info.shortName, cardX + cardWidth / 2, yPos + 7, { align: 'center' });
 
     // Interest rate
-    let cardY = yPos + 16;
-    pdf.setFontSize(6);
-    pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
-    pdf.text('Interest Rate', cardX + cardWidth / 2, cardY, { align: 'center' });
-    cardY += 4;
+    let cardY = yPos + 14;
     pdf.setFontSize(10);
     // Use color for rate text, but ensure dark colors are readable
     if (needsLightText(color)) {
@@ -297,6 +293,12 @@ export async function generatePDF(
       pdf.setTextColor(COLORS.text.r, COLORS.text.g, COLORS.text.b);
     }
     pdf.text(`${calc.interestRate.toFixed(3)}%`, cardX + cardWidth / 2, cardY, { align: 'center' });
+
+    // APR
+    cardY += 4;
+    pdf.setFontSize(6);
+    pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
+    pdf.text(`${calc.apr.toFixed(3)}% APR`, cardX + cardWidth / 2, cardY, { align: 'center' });
 
     // ARM details if applicable
     if (calc.isARM && calc.armDetails) {
