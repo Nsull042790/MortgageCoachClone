@@ -50,6 +50,7 @@ const COLORS = {
   usda: { r: 255, g: 209, b: 89 },           // #ffd159 - gold
   text: { r: 13, g: 23, b: 60 },             // #0d173c - navy for text
   textLight: { r: 107, g: 114, b: 128 },     // gray-500
+  textMedium: { r: 75, g: 85, b: 99 },        // gray-600
   border: { r: 229, g: 231, b: 235 },        // gray-200
   background: { r: 249, g: 250, b: 251 },    // gray-50
   white: { r: 255, g: 255, b: 255 },
@@ -497,15 +498,30 @@ export async function generatePDF(
   pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
   pdf.text(LOAN_TYPE_INFO[lowestCalc.loanType].name, pieCenterX, totalY + 4, { align: 'center' });
 
-  // ===== FOOTER =====
+  // ===== COMPLIANCE FOOTER =====
+  const footerStartY = pageHeight - 28;
+
+  // NMLS and Contact
+  pdf.setFontSize(7);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(COLORS.textMedium.r, COLORS.textMedium.g, COLORS.textMedium.b);
+  pdf.text('Luminate Bank NMLS 1281698', pageWidth / 2, footerStartY, { align: 'center' });
+
+  pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(6);
+  pdf.text('2523 S. Wayzata Blvd., Suite 100, Minneapolis, MN 55405 | (952) 939-7200', pageWidth / 2, footerStartY + 4, { align: 'center' });
+
+  // Compliance text
   pdf.setTextColor(COLORS.textLight.r, COLORS.textLight.g, COLORS.textLight.b);
-  pdf.text(
-    'This calculator provides estimates only. Actual rates, terms, and costs may vary. Contact your loan officer for accurate quotes.',
-    pageWidth / 2,
-    pageHeight - 8,
-    { align: 'center' }
-  );
+  pdf.setFontSize(5);
+  const complianceText = 'This is not an offer to enter into an agreement. Any information provided outlining minimum down payment requirements that are allowed by specific loan program and product guidelines. Information, rates and programs are subject to change without prior notice and may not be available in all states. All loans are subject to credit and property approval. Luminate Bank is not affiliated with any government agency.';
+  const complianceLines = pdf.splitTextToSize(complianceText, pageWidth - 30);
+  pdf.text(complianceLines, pageWidth / 2, footerStartY + 9, { align: 'center' });
+
+  // Copyright line
+  pdf.setFontSize(6);
+  pdf.setTextColor(COLORS.textMedium.r, COLORS.textMedium.g, COLORS.textMedium.b);
+  pdf.text('© Luminate Bank. All rights reserved. Member FDIC. Equal Housing Opportunity Lender.', pageWidth / 2, pageHeight - 5, { align: 'center' });
 
   // Save the PDF
   const clientSlug = options?.clientName ? options.clientName.replace(/\s+/g, '-').toLowerCase() + '-' : '';

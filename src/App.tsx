@@ -70,12 +70,22 @@ function AppContent() {
             {/* Amortization Schedule */}
             <AmortizationSchedule />
 
-            {/* Disclaimer */}
-            <div className="text-center text-xs text-gray-400 pt-8 pb-4">
-              <p>
-                This calculator provides estimates only. Actual rates, terms, and costs may vary.
-                Contact your loan officer for accurate quotes and eligibility requirements.
-              </p>
+            {/* Compliance Footer */}
+            <div className="text-center text-xs text-gray-500 pt-8 pb-4 border-t border-gray-200 mt-8">
+              <div className="max-w-4xl mx-auto space-y-3">
+                <p className="font-medium text-gray-600">
+                  Luminate Bank NMLS 1281698
+                </p>
+                <p>
+                  Bank Headquarters: 2523 S. Wayzata Blvd., Suite 100, Minneapolis, MN 55405 | (952) 939-7200
+                </p>
+                <p className="text-gray-400 leading-relaxed">
+                  This is not an offer to enter into an agreement. Any information provided outlining minimum down payment requirements that are allowed by specific loan program and product guidelines. Information, rates and programs are subject to change without prior notice and may not be available in all states. All loans are subject to credit and property approval. Luminate Bank is not affiliated with any government agency.
+                </p>
+                <p className="text-gray-500">
+                  © Luminate Bank. All rights reserved. Member FDIC. Equal Housing Opportunity Lender.
+                </p>
+              </div>
             </div>
           </div>
         </main>
