@@ -30,7 +30,7 @@ function RateDisplay({ label, marketRate, currentRate, onApply }: RateDisplayPro
         )}
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-sm font-semibold text-gray-900">{marketRate.toFixed(2)}%</span>
+        <span className="text-sm font-semibold text-gray-900">{marketRate.toFixed(3)}%</span>
         <button
           onClick={() => onApply(marketRate)}
           className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
