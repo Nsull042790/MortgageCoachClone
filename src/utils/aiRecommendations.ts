@@ -139,35 +139,66 @@ function findBestLoan(
 ): { loan: LoanCalculation; reason: string } | null {
   if (calculations.length === 0) return null;
 
+  const lowestMonthly = Math.min(...calculations.map(c => c.totalMonthly));
+  const lowestTotal = Math.min(...calculations.map(c => c.totalCost));
+  const lowestCash = Math.min(...calculations.map(c => c.cashToClose));
+
   // Score each loan
   const scored = calculations.map(calc => {
     let score = 0;
-    let reasons: string[] = [];
+    const reasons: string[] = [];
 
     // Monthly payment score (lower is better)
-    const lowestMonthly = Math.min(...calculations.map(c => c.totalMonthly));
     const monthlyScore = (lowestMonthly / calc.totalMonthly) * 100;
 
     // Total cost score (lower is better)
-    const lowestTotal = Math.min(...calculations.map(c => c.totalCost));
     const totalScore = (lowestTotal / calc.totalCost) * 100;
 
     // Cash to close score (lower is better)
-    const lowestCash = Math.min(...calculations.map(c => c.cashToClose));
     const cashScore = (lowestCash / calc.cashToClose) * 100;
 
-    // Time horizon consideration
+    // Calculate payment increase percentage vs lowest
+    const paymentIncreasePct = ((calc.totalMonthly - lowestMonthly) / lowestMonthly) * 100;
+
+    // REALISTIC WEIGHTING: Most borrowers prioritize monthly affordability
+    // Weight monthly payment heavily regardless of time horizon
     if (timeHorizon <= 5) {
-      // Short term: prioritize monthly payment and cash to close
-      score = monthlyScore * 0.5 + cashScore * 0.3 + totalScore * 0.2;
+      // Short term: strongly prioritize monthly payment
+      score = monthlyScore * 0.60 + cashScore * 0.25 + totalScore * 0.15;
       if (calc.totalMonthly === lowestMonthly) reasons.push('lowest monthly payment');
     } else if (timeHorizon <= 10) {
-      // Medium term: balanced
-      score = monthlyScore * 0.35 + totalScore * 0.35 + cashScore * 0.3;
+      // Medium term: still favor monthly, some weight to total
+      score = monthlyScore * 0.50 + totalScore * 0.30 + cashScore * 0.20;
+      if (calc.totalMonthly === lowestMonthly) reasons.push('lowest monthly payment');
     } else {
-      // Long term: prioritize total cost
-      score = totalScore * 0.5 + monthlyScore * 0.3 + cashScore * 0.2;
-      if (calc.totalCost === lowestTotal) reasons.push('lowest total cost');
+      // Long term: balanced but still favor monthly for practicality
+      score = monthlyScore * 0.45 + totalScore * 0.35 + cashScore * 0.20;
+    }
+
+    // AFFORDABILITY PENALTY: Progressive penalty for higher monthly payments
+    // Small increases (under 15%) - minor penalty
+    // Medium increases (15-30%) - moderate penalty
+    // Large increases (30%+) - heavy penalty
+    if (paymentIncreasePct > 30) {
+      score -= 25; // Heavy penalty - payment is 30%+ higher
+    } else if (paymentIncreasePct > 20) {
+      score -= 15; // Moderate penalty
+    } else if (paymentIncreasePct > 10) {
+      score -= 8; // Minor penalty
+    }
+
+    // 15-YEAR SPECIFIC LOGIC
+    // Only give bonus if payment is reasonably close to 30-year options
+    const is15Year = calc.termMonths === 180;
+    if (is15Year) {
+      if (paymentIncreasePct <= 25 && timeHorizon >= 10) {
+        // Payment is manageable and staying long-term - 15yr makes sense
+        score += 5;
+        reasons.push('faster equity build with manageable payment');
+      } else if (paymentIncreasePct > 35) {
+        // Payment too high - not practical for most borrowers
+        score -= 10;
+      }
     }
 
     // Bonus for no PMI
@@ -181,16 +212,29 @@ function findBestLoan(
       score -= 3;
     }
 
-    return { calc, score, reasons };
+    // Add reason for lowest total cost if applicable (long-term only)
+    if (calc.totalCost === lowestTotal && timeHorizon > 10 && paymentIncreasePct <= 25) {
+      reasons.push('lowest total cost');
+    }
+
+    return { calc, score, reasons, paymentIncreasePct };
   });
 
   // Sort by score
   scored.sort((a, b) => b.score - a.score);
   const best = scored[0];
 
-  const reason = best.reasons.length > 0
-    ? best.reasons.join(', ')
-    : 'best balance of monthly payment and total cost';
+  // Generate appropriate reason
+  let reason = '';
+  if (best.reasons.length > 0) {
+    reason = best.reasons.join(', ');
+  } else if (best.paymentIncreasePct === 0) {
+    reason = 'lowest monthly payment with good overall value';
+  } else if (best.paymentIncreasePct <= 15) {
+    reason = 'best balance of monthly payment and total savings';
+  } else {
+    reason = 'best overall value for your situation';
+  }
 
   return { loan: best.calc, reason };
 }
