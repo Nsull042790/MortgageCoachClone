@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { XMarkIcon, ClipboardDocumentIcon, CheckIcon, VideoCameraIcon, LinkIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { useLoan } from '../context/LoanContext';
 import { generateShareableUrl } from '../utils/urlSharing';
-import { generateTrackingId, saveTrackingId, getViewSummary, formatRelativeTime } from '../utils/viewTracking';
+import { generateTrackingId, saveTrackingId, getViewCount, formatRelativeTime } from '../utils/viewTracking';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -70,11 +70,44 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
   const [isShortening, setIsShortening] = useState(false);
   const [shortenError, setShortenError] = useState<string | null>(null);
 
-  // Generate a stable tracking ID for this share session
-  const trackingId = useMemo(() => generateTrackingId(), []);
+  // Use existing tracking ID from scenario, or generate a new one
+  const trackingId = useMemo(() => {
+    return currentScenario.trackingId || generateTrackingId();
+  }, [currentScenario.trackingId]);
 
-  // Get view summary for the current tracking ID
-  const [viewSummary, setViewSummary] = useState(() => getViewSummary(trackingId));
+  // Save tracking ID to scenario if it's new
+  useEffect(() => {
+    if (!currentScenario.trackingId && trackingId) {
+      updateTrackingId(trackingId);
+    }
+  }, [currentScenario.trackingId, trackingId, updateTrackingId]);
+
+  // View count state
+  const [viewCount, setViewCount] = useState<number>(0);
+  const [isLoadingViews, setIsLoadingViews] = useState(false);
+  const [lastChecked, setLastChecked] = useState<string | null>(null);
+
+  // Fetch view count from API
+  const fetchViewCount = async () => {
+    if (!trackingId) return;
+    setIsLoadingViews(true);
+    try {
+      const count = await getViewCount(trackingId);
+      setViewCount(count);
+      setLastChecked(new Date().toISOString());
+    } catch (e) {
+      console.warn('Failed to fetch view count:', e);
+    } finally {
+      setIsLoadingViews(false);
+    }
+  };
+
+  // Fetch view count on mount and when modal opens
+  useEffect(() => {
+    if (isOpen && trackingId) {
+      fetchViewCount();
+    }
+  }, [isOpen, trackingId]);
 
   // Auto-fill with client name from scenario
   useEffect(() => {
@@ -96,13 +129,12 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
     setShortenError(null);
   }, [clientName, vimeoInput, currentScenario.inputs, currentScenario.selectedLoanTypes]);
 
-  // Refresh view summary periodically
+  // Refresh view count periodically when modal is open
   useEffect(() => {
-    const interval = setInterval(() => {
-      setViewSummary(getViewSummary(trackingId));
-    }, 5000);
+    if (!isOpen) return;
+    const interval = setInterval(fetchViewCount, 10000); // Check every 10 seconds
     return () => clearInterval(interval);
-  }, [trackingId]);
+  }, [isOpen, trackingId]);
 
   if (!isOpen) return null;
 
@@ -310,25 +342,29 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
             <div className="flex items-center gap-2">
               <EyeIcon className="w-5 h-5 text-gray-400" />
               <span className="text-sm text-gray-600">View Tracking</span>
+              <button
+                onClick={fetchViewCount}
+                disabled={isLoadingViews}
+                className="text-xs text-blue-500 hover:text-blue-700 disabled:opacity-50"
+                title="Refresh view count"
+              >
+                {isLoadingViews ? '...' : '↻'}
+              </button>
             </div>
             <div className="text-right">
-              {viewSummary ? (
-                <div>
-                  <span className="text-lg font-semibold" style={{ color: '#0d173c' }}>
-                    {viewSummary.totalViews}
-                  </span>
-                  <span className="text-sm text-gray-500 ml-1">
-                    view{viewSummary.totalViews !== 1 ? 's' : ''}
-                  </span>
-                  {viewSummary.lastViewedAt && (
-                    <p className="text-xs text-gray-400">
-                      Last: {formatRelativeTime(viewSummary.lastViewedAt)}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <span className="text-sm text-gray-400">No views yet</span>
-              )}
+              <div>
+                <span className="text-lg font-semibold" style={{ color: '#0d173c' }}>
+                  {viewCount}
+                </span>
+                <span className="text-sm text-gray-500 ml-1">
+                  view{viewCount !== 1 ? 's' : ''}
+                </span>
+                {lastChecked && (
+                  <p className="text-xs text-gray-400">
+                    Updated: {formatRelativeTime(lastChecked)}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </div>

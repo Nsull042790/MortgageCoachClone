@@ -89,9 +89,11 @@ export function LoanProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const sharedData = getSharedScenarioFromUrl();
     if (sharedData) {
-      // Record the view if tracking ID is present
+      // Record the view if tracking ID is present (async, fire and forget)
       if (sharedData.trackingId) {
-        recordView(sharedData.trackingId, sharedData.clientName);
+        recordView(sharedData.trackingId, sharedData.clientName).catch(() => {
+          // Ignore errors - view tracking is best effort
+        });
       }
 
       // Create a new scenario with the shared data

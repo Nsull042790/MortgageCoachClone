@@ -1,6 +1,6 @@
 /**
  * View tracking utility for shared scenarios
- * Uses localStorage to track views (works without a backend)
+ * Uses CountAPI for cross-browser tracking + localStorage for local backup
  */
 
 interface ViewRecord {
@@ -20,6 +20,10 @@ interface TrackingSummary {
 
 const STORAGE_KEY = 'loan_scenario_views';
 const TRACKING_IDS_KEY = 'loan_tracking_ids';
+const VIEW_COUNTS_KEY = 'loan_view_counts';
+
+// CountAPI namespace for this app
+const COUNTAPI_NAMESPACE = 'luminatebank-loans';
 
 /**
  * Generate a unique tracking ID
@@ -29,25 +33,91 @@ export function generateTrackingId(): string {
 }
 
 /**
- * Record a view for a tracking ID
+ * Record a view using CountAPI (cross-browser) + localStorage backup
  */
-export function recordView(trackingId: string, clientName?: string): void {
+export async function recordView(trackingId: string, clientName?: string): Promise<void> {
+  // Record locally (backup)
   const views = getStoredViews();
-
   const newView: ViewRecord = {
     trackingId,
     clientName,
     viewedAt: new Date().toISOString(),
     userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
   };
-
   views.push(newView);
 
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(views));
   } catch (e) {
-    console.warn('Failed to save view record:', e);
+    console.warn('Failed to save view record locally:', e);
   }
+
+  // Record via CountAPI (cross-browser)
+  try {
+    const response = await fetch(
+      `https://api.countapi.xyz/hit/${COUNTAPI_NAMESPACE}/${trackingId}`
+    );
+    if (response.ok) {
+      const data = await response.json();
+      // Cache the count locally for the loan officer to see
+      updateCachedViewCount(trackingId, data.value);
+    }
+  } catch (e) {
+    console.warn('Failed to record view via CountAPI:', e);
+  }
+}
+
+/**
+ * Get view count from CountAPI
+ */
+export async function getViewCount(trackingId: string): Promise<number> {
+  try {
+    const response = await fetch(
+      `https://api.countapi.xyz/get/${COUNTAPI_NAMESPACE}/${trackingId}`
+    );
+    if (response.ok) {
+      const data = await response.json();
+      if (data.value !== null) {
+        updateCachedViewCount(trackingId, data.value);
+        return data.value;
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to get view count from CountAPI:', e);
+  }
+
+  // Fallback to cached count
+  return getCachedViewCount(trackingId);
+}
+
+/**
+ * Update cached view count in localStorage
+ */
+function updateCachedViewCount(trackingId: string, count: number): void {
+  try {
+    const cached = localStorage.getItem(VIEW_COUNTS_KEY);
+    const counts: Record<string, { count: number; updatedAt: string }> = cached ? JSON.parse(cached) : {};
+    counts[trackingId] = { count, updatedAt: new Date().toISOString() };
+    localStorage.setItem(VIEW_COUNTS_KEY, JSON.stringify(counts));
+  } catch (e) {
+    console.warn('Failed to cache view count:', e);
+  }
+}
+
+/**
+ * Get cached view count from localStorage
+ */
+function getCachedViewCount(trackingId: string): number {
+  try {
+    const cached = localStorage.getItem(VIEW_COUNTS_KEY);
+    if (cached) {
+      const counts = JSON.parse(cached);
+      return counts[trackingId]?.count || 0;
+    }
+  } catch {
+    // Ignore
+  }
+  return 0;
 }
 
 /**
