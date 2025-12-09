@@ -338,34 +338,39 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
           </div>
 
           {/* View Tracking */}
-          <div className="flex items-center justify-between p-3 border rounded-lg bg-white">
-            <div className="flex items-center gap-2">
-              <EyeIcon className="w-5 h-5 text-gray-400" />
-              <span className="text-sm text-gray-600">View Tracking</span>
-              <button
-                onClick={fetchViewCount}
-                disabled={isLoadingViews}
-                className="text-xs text-blue-500 hover:text-blue-700 disabled:opacity-50"
-                title="Refresh view count"
-              >
-                {isLoadingViews ? '...' : '↻'}
-              </button>
-            </div>
-            <div className="text-right">
-              <div>
-                <span className="text-lg font-semibold" style={{ color: '#0d173c' }}>
-                  {viewCount}
-                </span>
-                <span className="text-sm text-gray-500 ml-1">
-                  view{viewCount !== 1 ? 's' : ''}
-                </span>
-                {lastChecked && (
-                  <p className="text-xs text-gray-400">
-                    Updated: {formatRelativeTime(lastChecked)}
-                  </p>
-                )}
+          <div className="p-3 border rounded-lg bg-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <EyeIcon className="w-5 h-5 text-gray-400" />
+                <span className="text-sm text-gray-600">View Tracking</span>
+                <button
+                  onClick={fetchViewCount}
+                  disabled={isLoadingViews}
+                  className="text-xs text-blue-500 hover:text-blue-700 disabled:opacity-50"
+                  title="Refresh view count"
+                >
+                  {isLoadingViews ? '...' : '↻'}
+                </button>
+              </div>
+              <div className="text-right">
+                <div>
+                  <span className="text-lg font-semibold" style={{ color: '#0d173c' }}>
+                    {viewCount}
+                  </span>
+                  <span className="text-sm text-gray-500 ml-1">
+                    view{viewCount !== 1 ? 's' : ''}
+                  </span>
+                  {lastChecked && (
+                    <p className="text-xs text-gray-400">
+                      Updated: {formatRelativeTime(lastChecked)}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
+            <p className="text-xs text-gray-400 mt-2">
+              Note: Cross-browser tracking requires backend integration for production use.
+            </p>
           </div>
         </div>
 

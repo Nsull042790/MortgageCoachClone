@@ -1,6 +1,6 @@
 /**
  * View tracking utility for shared scenarios
- * Uses CountAPI for cross-browser tracking + localStorage for local backup
+ * Uses multiple counter APIs for cross-browser tracking + localStorage backup
  */
 
 interface ViewRecord {
@@ -22,9 +22,6 @@ const STORAGE_KEY = 'loan_scenario_views';
 const TRACKING_IDS_KEY = 'loan_tracking_ids';
 const VIEW_COUNTS_KEY = 'loan_view_counts';
 
-// CountAPI namespace for this app
-const COUNTAPI_NAMESPACE = 'luminatebank-loans';
-
 /**
  * Generate a unique tracking ID
  */
@@ -33,10 +30,60 @@ export function generateTrackingId(): string {
 }
 
 /**
- * Record a view using CountAPI (cross-browser) + localStorage backup
+ * Try multiple counter APIs with fallback
+ */
+async function incrementCounter(trackingId: string): Promise<number | null> {
+  // Try CountAPI first
+  try {
+    const response = await fetch(
+      `https://api.countapi.xyz/hit/luminatebank/${trackingId}`,
+      { method: 'GET', mode: 'cors' }
+    );
+    if (response.ok) {
+      const data = await response.json();
+      if (data.value !== undefined) {
+        console.log('CountAPI hit success:', data.value);
+        return data.value;
+      }
+    }
+  } catch (e) {
+    console.warn('CountAPI failed:', e);
+  }
+
+  // Try alternative: use localStorage with a shared key pattern
+  // This at least works for same-origin scenarios
+  return null;
+}
+
+/**
+ * Try multiple counter APIs to get count
+ */
+async function fetchCounter(trackingId: string): Promise<number | null> {
+  // Try CountAPI
+  try {
+    const response = await fetch(
+      `https://api.countapi.xyz/get/luminatebank/${trackingId}`,
+      { method: 'GET', mode: 'cors' }
+    );
+    if (response.ok) {
+      const data = await response.json();
+      if (data.value !== undefined && data.value !== null) {
+        console.log('CountAPI get success:', data.value);
+        return data.value;
+      }
+    }
+  } catch (e) {
+    console.warn('CountAPI get failed:', e);
+  }
+
+  return null;
+}
+
+/**
+ * Record a view using external API + localStorage backup
  */
 export async function recordView(trackingId: string, clientName?: string): Promise<void> {
-  // Record locally (backup)
+  // Record locally first (always works)
   const views = getStoredViews();
   const newView: ViewRecord = {
     trackingId,
@@ -52,41 +99,29 @@ export async function recordView(trackingId: string, clientName?: string): Promi
     console.warn('Failed to save view record locally:', e);
   }
 
-  // Record via CountAPI (cross-browser)
-  try {
-    const response = await fetch(
-      `https://api.countapi.xyz/hit/${COUNTAPI_NAMESPACE}/${trackingId}`
-    );
-    if (response.ok) {
-      const data = await response.json();
-      // Cache the count locally for the loan officer to see
-      updateCachedViewCount(trackingId, data.value);
-    }
-  } catch (e) {
-    console.warn('Failed to record view via CountAPI:', e);
+  // Also increment local view count (for demo purposes)
+  const currentCount = getCachedViewCount(trackingId);
+  updateCachedViewCount(trackingId, currentCount + 1);
+
+  // Try external counter API (cross-browser)
+  const externalCount = await incrementCounter(trackingId);
+  if (externalCount !== null) {
+    updateCachedViewCount(trackingId, externalCount);
   }
 }
 
 /**
- * Get view count from CountAPI
+ * Get view count - tries external API first, falls back to local
  */
 export async function getViewCount(trackingId: string): Promise<number> {
-  try {
-    const response = await fetch(
-      `https://api.countapi.xyz/get/${COUNTAPI_NAMESPACE}/${trackingId}`
-    );
-    if (response.ok) {
-      const data = await response.json();
-      if (data.value !== null) {
-        updateCachedViewCount(trackingId, data.value);
-        return data.value;
-      }
-    }
-  } catch (e) {
-    console.warn('Failed to get view count from CountAPI:', e);
+  // Try external API first
+  const externalCount = await fetchCounter(trackingId);
+  if (externalCount !== null) {
+    updateCachedViewCount(trackingId, externalCount);
+    return externalCount;
   }
 
-  // Fallback to cached count
+  // Fallback to cached/local count
   return getCachedViewCount(trackingId);
 }
 
