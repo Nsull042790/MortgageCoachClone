@@ -14,3 +14,4 @@ export { RateSimulator } from './RateSimulator';
 export { ClosingCostsBreakdown } from './ClosingCostsBreakdown';
 export { AmortizationSchedule } from './AmortizationSchedule';
 export { AIRecommendations } from './AIRecommendations';
+export { APRAdjustments } from './APRAdjustments';

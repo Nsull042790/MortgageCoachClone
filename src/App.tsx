@@ -14,6 +14,7 @@ import {
   ClosingCostsBreakdown,
   AmortizationSchedule,
   AIRecommendations,
+  APRAdjustments,
 } from './components';
 
 function AppContent() {
@@ -44,6 +45,9 @@ function AppContent() {
 
             {/* Interest Rates - hidden in client view */}
             {!isClientView && <InterestRates />}
+
+            {/* APR Adjustments (Points & Credits) - hidden in client view */}
+            {!isClientView && <APRAdjustments />}
 
             {/* Loan Type Selector - hidden in client view */}
             {!isClientView && (

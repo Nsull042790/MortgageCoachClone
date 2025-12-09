@@ -322,10 +322,19 @@ export function calculateLoan(inputs: LoanInputs, loanType: LoanType): LoanCalcu
     interestRates,
     borrowerCount = 'single',
     firstTimeHomeBuyer = false,
-    pmiOption = 'bpmi'
+    pmiOption = 'bpmi',
+    discountPoints,
+    lenderCredits
   } = inputs;
 
   let loanAmount = homePrice - downPayment;
+
+  // Get discount points and lender credits for this loan type (default to 0)
+  const points = discountPoints?.[loanType] ?? 0;
+  const credits = lenderCredits?.[loanType] ?? 0;
+
+  // Calculate points cost (1 point = 1% of loan amount)
+  const pointsCost = (points / 100) * loanAmount;
   const ltv = (loanAmount / homePrice) * 100;
   const downPaymentPercent = (downPayment / homePrice) * 100;
   let interestRate = interestRates[loanType];
@@ -436,9 +445,9 @@ export function calculateLoan(inputs: LoanInputs, loanType: LoanType): LoanCalcu
   // Total monthly payment
   const totalMonthly = monthlyPI + monthlyMI + monthlyTaxes + monthlyInsurance + monthlyHOA;
 
-  // Cash to close (down payment + upfront fees + estimated closing costs ~3%)
+  // Cash to close (down payment + upfront fees + points - credits + estimated closing costs ~3%)
   const estimatedClosingCosts = loanAmount * 0.03;
-  const cashToClose = downPayment + upfrontFees + estimatedClosingCosts;
+  const cashToClose = downPayment + upfrontFees + pointsCost - credits + estimatedClosingCosts;
 
   // Calculate total cost and ARM details
   let totalCost: number;
@@ -462,7 +471,7 @@ export function calculateLoan(inputs: LoanInputs, loanType: LoanType): LoanCalcu
       monthlyMI
     );
 
-    totalCost = armCalc.totalCost + downPayment + upfrontFees;
+    totalCost = armCalc.totalCost + downPayment + upfrontFees + pointsCost - credits;
 
     armDetails = {
       initialRate: interestRate,
@@ -475,11 +484,11 @@ export function calculateLoan(inputs: LoanInputs, loanType: LoanType): LoanCalcu
   } else {
     // Fixed rate - simple calculation
     const totalPayments = totalMonthly * termMonths;
-    totalCost = totalPayments + downPayment + upfrontFees;
+    totalCost = totalPayments + downPayment + upfrontFees + pointsCost - credits;
   }
 
-  // Calculate APR (includes P&I and MI in the payment, plus fees)
-  const apr = calculateAPR(loanAmount, monthlyPI + monthlyMI, termMonths, upfrontFees, estimatedClosingCosts);
+  // Calculate APR (includes P&I and MI in the payment, plus fees and discount points)
+  const apr = calculateAPR(loanAmount, monthlyPI + monthlyMI, termMonths, upfrontFees + pointsCost, estimatedClosingCosts - credits);
 
   return {
     loanType,

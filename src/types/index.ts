@@ -47,6 +47,9 @@ export interface LoanInputs {
   firstTimeHomeBuyer: boolean;
   pmiOption: PMIOption;
   closingDate?: string; // For prepaid interest calculation
+  // APR Adjustments
+  discountPoints?: Record<LoanType, number>; // Points paid to lower rate (each point = 1% of loan)
+  lenderCredits?: Record<LoanType, number>; // Credits from lender (reduces closing costs)
   // AI Recommendation fields
   timeHorizon?: number; // Years planning to stay in home
   monthlyIncome?: number; // Gross monthly income for DTI
