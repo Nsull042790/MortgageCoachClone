@@ -3,6 +3,7 @@ import { XMarkIcon, TrashIcon, FolderOpenIcon, EyeIcon } from '@heroicons/react/
 import { useLoan } from '../context/LoanContext';
 import { formatCurrencyWhole } from '../utils/mortgageCalculations';
 import { getViewSummary, formatRelativeTime } from '../utils/viewTracking';
+import { MarketRates } from './MarketRates';
 
 interface SavedScenariosSidebarProps {
   isOpen: boolean;
@@ -172,6 +173,9 @@ export function SavedScenariosSidebar({ isOpen, onClose }: SavedScenariosSidebar
               </div>
             )}
           </div>
+
+          {/* Market Rates Section */}
+          <MarketRates />
         </div>
       </div>
     </>
