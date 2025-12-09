@@ -13,3 +13,4 @@ export { ClientNameInput } from './ClientNameInput';
 export { RateSimulator } from './RateSimulator';
 export { ClosingCostsBreakdown } from './ClosingCostsBreakdown';
 export { AmortizationSchedule } from './AmortizationSchedule';
+export { AIRecommendations } from './AIRecommendations';

@@ -13,6 +13,7 @@ import {
   RateSimulator,
   ClosingCostsBreakdown,
   AmortizationSchedule,
+  AIRecommendations,
 } from './components';
 
 function AppContent() {
@@ -53,6 +54,9 @@ function AppContent() {
 
             {/* Comparison Cards */}
             <ComparisonGrid />
+
+            {/* AI Recommendations */}
+            <AIRecommendations />
 
             {/* Payment Analysis Charts */}
             <PaymentCharts />

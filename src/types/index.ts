@@ -35,7 +35,24 @@ export interface LoanInputs {
   firstTimeHomeBuyer: boolean;
   pmiOption: PMIOption;
   closingDate?: string; // For prepaid interest calculation
+  // AI Recommendation fields
+  timeHorizon?: number; // Years planning to stay in home
+  monthlyIncome?: number; // Gross monthly income for DTI
+  monthlyDebts?: number; // Other monthly debt payments
+  isVeteran?: boolean; // Eligible for VA loan
+  isRural?: boolean; // Eligible for USDA loan
 }
+
+export type TimeHorizonOption = 3 | 5 | 7 | 10 | 15 | 30;
+
+export const TIME_HORIZON_OPTIONS: { value: TimeHorizonOption; label: string }[] = [
+  { value: 3, label: '1-3 years' },
+  { value: 5, label: '4-5 years' },
+  { value: 7, label: '6-7 years' },
+  { value: 10, label: '8-10 years' },
+  { value: 15, label: '10-15 years' },
+  { value: 30, label: '15+ years (forever home)' },
+];
 
 export interface LoanCalculation {
   loanType: LoanType;
