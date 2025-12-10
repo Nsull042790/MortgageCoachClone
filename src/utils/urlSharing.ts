@@ -1,6 +1,50 @@
 import type { LoanInputs, LoanType, BorrowerCount, PMIOption } from '../types';
 
 /**
+ * Expiration options for shared links
+ */
+export type ExpirationOption = '24h' | '7d' | '30d' | 'never';
+
+/**
+ * Get expiration timestamp based on option
+ */
+export function getExpirationTimestamp(option: ExpirationOption): number | null {
+  const now = Date.now();
+  switch (option) {
+    case '24h':
+      return now + 24 * 60 * 60 * 1000; // 24 hours
+    case '7d':
+      return now + 7 * 24 * 60 * 60 * 1000; // 7 days
+    case '30d':
+      return now + 30 * 24 * 60 * 60 * 1000; // 30 days
+    case 'never':
+    default:
+      return null;
+  }
+}
+
+/**
+ * Check if a link has expired
+ */
+export function isLinkExpired(expirationTimestamp: number | null | undefined): boolean {
+  if (!expirationTimestamp) return false; // No expiration = never expires
+  return Date.now() > expirationTimestamp;
+}
+
+/**
+ * Format expiration date for display
+ */
+export function formatExpirationDate(timestamp: number): string {
+  return new Date(timestamp).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+/**
  * Data structure for sharing via URL (minimal data needed to reconstruct scenario)
  */
 interface ShareableData {
@@ -18,6 +62,7 @@ interface ShareableData {
   bc?: string;     // borrowerCount (optional, default 'single')
   fthb?: boolean;  // firstTimeHomeBuyer (optional, default false)
   pmi?: string;    // pmiOption (optional, default 'bpmi')
+  exp?: number;    // expirationTimestamp (optional)
 }
 
 /**
@@ -28,7 +73,8 @@ export function encodeScenario(
   selectedLoanTypes: LoanType[],
   clientName?: string,
   vimeoId?: string,
-  trackingId?: string
+  trackingId?: string,
+  expirationTimestamp?: number | null
 ): string {
   const data: ShareableData = {
     hp: inputs.homePrice,
@@ -56,6 +102,10 @@ export function encodeScenario(
     data.tid = trackingId;
   }
 
+  if (expirationTimestamp) {
+    data.exp = expirationTimestamp;
+  }
+
   const jsonString = JSON.stringify(data);
   const base64 = btoa(encodeURIComponent(jsonString));
   return base64;
@@ -70,6 +120,7 @@ export function decodeScenario(encoded: string): {
   clientName?: string;
   vimeoId?: string;
   trackingId?: string;
+  expirationTimestamp?: number;
 } | null {
   try {
     const jsonString = decodeURIComponent(atob(encoded));
@@ -95,6 +146,7 @@ export function decodeScenario(encoded: string): {
       clientName: data.cn,
       vimeoId: data.vid,
       trackingId: data.tid,
+      expirationTimestamp: data.exp,
     };
   } catch {
     return null;
@@ -109,9 +161,10 @@ export function generateShareableUrl(
   selectedLoanTypes: LoanType[],
   clientName?: string,
   vimeoId?: string,
-  trackingId?: string
+  trackingId?: string,
+  expirationTimestamp?: number | null
 ): string {
-  const encoded = encodeScenario(inputs, selectedLoanTypes, clientName, vimeoId, trackingId);
+  const encoded = encodeScenario(inputs, selectedLoanTypes, clientName, vimeoId, trackingId, expirationTimestamp);
   const baseUrl = window.location.origin + window.location.pathname;
   return `${baseUrl}?s=${encoded}`;
 }

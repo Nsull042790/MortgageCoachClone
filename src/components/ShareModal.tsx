@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { XMarkIcon, ClipboardDocumentIcon, CheckIcon, VideoCameraIcon, LinkIcon, EyeIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ClipboardDocumentIcon, CheckIcon, VideoCameraIcon, LinkIcon, EyeIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { useLoan } from '../context/LoanContext';
-import { generateShareableUrl } from '../utils/urlSharing';
+import { generateShareableUrl, getExpirationTimestamp, formatExpirationDate, type ExpirationOption } from '../utils/urlSharing';
 import { generateTrackingId, saveTrackingId, getViewCount, formatRelativeTime } from '../utils/viewTracking';
 
 interface ShareModalProps {
@@ -69,6 +69,7 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
   const [shortUrl, setShortUrl] = useState<string | null>(null);
   const [isShortening, setIsShortening] = useState(false);
   const [shortenError, setShortenError] = useState<string | null>(null);
+  const [expiration, setExpiration] = useState<ExpirationOption>('7d');
 
   // Use existing tracking ID from scenario, or generate a new one
   const trackingId = useMemo(() => {
@@ -127,7 +128,7 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
   useEffect(() => {
     setShortUrl(null);
     setShortenError(null);
-  }, [clientName, vimeoInput, currentScenario.inputs, currentScenario.selectedLoanTypes]);
+  }, [clientName, vimeoInput, expiration, currentScenario.inputs, currentScenario.selectedLoanTypes]);
 
   // Refresh view count periodically when modal is open
   useEffect(() => {
@@ -139,13 +140,15 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
   if (!isOpen) return null;
 
   const vimeoId = extractVimeoId(vimeoInput);
+  const expirationTimestamp = getExpirationTimestamp(expiration);
 
   const shareableUrl = generateShareableUrl(
     currentScenario.inputs,
     currentScenario.selectedLoanTypes,
     clientName || undefined,
     vimeoId || undefined,
-    trackingId
+    trackingId,
+    expirationTimestamp
   );
 
   // Display URL - short or full
@@ -265,6 +268,33 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
             </p>
           </div>
 
+          {/* Link Expiration */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              <span className="flex items-center gap-1">
+                <ClockIcon className="w-4 h-4" />
+                Link Expiration
+              </span>
+            </label>
+            <select
+              value={expiration}
+              onChange={(e) => setExpiration(e.target.value as ExpirationOption)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+            >
+              <option value="24h">24 hours</option>
+              <option value="7d">7 days</option>
+              <option value="30d">30 days</option>
+              <option value="never">Never expires</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              {expiration === 'never' ? (
+                'Link will remain active indefinitely'
+              ) : expirationTimestamp ? (
+                <>Expires: {formatExpirationDate(expirationTimestamp)}</>
+              ) : null}
+            </p>
+          </div>
+
           {/* Shareable Link */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -334,6 +364,9 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
               <li>• Monthly payment breakdown</li>
               <li>• Visual charts for comparison</li>
               {vimeoId && <li style={{ color: '#967db9' }}>• Your personalized video message</li>}
+              {expiration !== 'never' && (
+                <li className="text-amber-600">• Link expires in {expiration === '24h' ? '24 hours' : expiration === '7d' ? '7 days' : '30 days'}</li>
+              )}
             </ul>
           </div>
 

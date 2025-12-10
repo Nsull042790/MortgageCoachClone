@@ -4,7 +4,7 @@ import type { LoanScenario, LoanInputs, LoanType, LoanCalculation, EmailTracking
 import { DEFAULT_INTEREST_RATES } from '../types';
 import { calculateAllLoans } from '../utils/mortgageCalculations';
 import { getSavedScenarios, saveScenario, deleteScenario } from '../utils/storage';
-import { getSharedScenarioFromUrl, clearSharedScenarioFromUrl } from '../utils/urlSharing';
+import { getSharedScenarioFromUrl, clearSharedScenarioFromUrl, isLinkExpired } from '../utils/urlSharing';
 import { recordView } from '../utils/viewTracking';
 
 interface LoanContextType {
@@ -14,6 +14,7 @@ interface LoanContextType {
 
   // Client view mode (when opened from shared URL)
   isClientView: boolean;
+  isExpiredLink: boolean;
   clientName: string | null;
 
   // Input handlers
@@ -78,6 +79,7 @@ export function LoanProvider({ children }: { children: ReactNode }) {
   const [savedScenarios, setSavedScenarios] = useState<LoanScenario[]>([]);
   const [calculations, setCalculations] = useState<LoanCalculation[]>([]);
   const [isClientView, setIsClientView] = useState(false);
+  const [isExpiredLink, setIsExpiredLink] = useState(false);
   const [clientName, setClientName] = useState<string | null>(null);
 
   // Load saved scenarios on mount
@@ -89,6 +91,15 @@ export function LoanProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const sharedData = getSharedScenarioFromUrl();
     if (sharedData) {
+      // Check if the link has expired
+      if (isLinkExpired(sharedData.expirationTimestamp)) {
+        setIsExpiredLink(true);
+        setIsClientView(true);
+        setClientName(sharedData.clientName || null);
+        clearSharedScenarioFromUrl();
+        return;
+      }
+
       // Record the view if tracking ID is present (async, fire and forget)
       if (sharedData.trackingId) {
         recordView(sharedData.trackingId, sharedData.clientName).catch(() => {
@@ -261,6 +272,7 @@ export function LoanProvider({ children }: { children: ReactNode }) {
     currentScenario,
     calculations,
     isClientView,
+    isExpiredLink,
     clientName,
     updateInputs,
     updateInterestRate,

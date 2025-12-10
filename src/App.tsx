@@ -16,11 +16,17 @@ import {
   AIRecommendations,
   APRAdjustments,
   TotalCostAnalysis,
+  ExpiredLink,
 } from './components';
 
 function AppContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { isClientView } = useLoan();
+  const { isClientView, isExpiredLink, clientName } = useLoan();
+
+  // Show expired link message if the shared link has expired
+  if (isExpiredLink) {
+    return <ExpiredLink clientName={clientName} />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex">

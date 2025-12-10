@@ -16,3 +16,4 @@ export { AmortizationSchedule } from './AmortizationSchedule';
 export { AIRecommendations } from './AIRecommendations';
 export { APRAdjustments } from './APRAdjustments';
 export { TotalCostAnalysis } from './TotalCostAnalysis';
+export { ExpiredLink } from './ExpiredLink';
