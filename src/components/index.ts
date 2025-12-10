@@ -15,3 +15,4 @@ export { ClosingCostsBreakdown } from './ClosingCostsBreakdown';
 export { AmortizationSchedule } from './AmortizationSchedule';
 export { AIRecommendations } from './AIRecommendations';
 export { APRAdjustments } from './APRAdjustments';
+export { TotalCostAnalysis } from './TotalCostAnalysis';

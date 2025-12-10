@@ -15,6 +15,7 @@ import {
   AmortizationSchedule,
   AIRecommendations,
   APRAdjustments,
+  TotalCostAnalysis,
 } from './components';
 
 function AppContent() {
@@ -61,6 +62,9 @@ function AppContent() {
 
             {/* AI Recommendations */}
             <AIRecommendations />
+
+            {/* Total Cost Analysis (Buy vs Rent) */}
+            <TotalCostAnalysis />
 
             {/* Payment Analysis Charts */}
             <PaymentCharts />
