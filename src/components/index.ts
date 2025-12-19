@@ -17,3 +17,4 @@ export { AIRecommendations } from './AIRecommendations';
 export { APRAdjustments } from './APRAdjustments';
 export { TotalCostAnalysis } from './TotalCostAnalysis';
 export { ExpiredLink } from './ExpiredLink';
+export { RefinanceCalculator } from './RefinanceCalculator';

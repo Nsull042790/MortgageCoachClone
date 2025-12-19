@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { HomeIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { LoanProvider, useLoan } from './context/LoanContext';
 import {
   Header,
@@ -17,10 +18,14 @@ import {
   APRAdjustments,
   TotalCostAnalysis,
   ExpiredLink,
+  RefinanceCalculator,
 } from './components';
+
+type AppMode = 'purchase' | 'refinance';
 
 function AppContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mode, setMode] = useState<AppMode>('purchase');
   const { isClientView, isExpiredLink, clientName } = useLoan();
 
   // Show expired link message if the shared link has expired
@@ -44,45 +49,85 @@ function AppContent() {
 
         <main className="flex-1 overflow-auto">
           <div id="pdf-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-            {/* Client Name Input - hidden in client view */}
-            <ClientNameInput />
-
-            {/* Loan Inputs - read-only display in client view */}
-            <LoanInputs />
-
-            {/* Interest Rates - hidden in client view */}
-            {!isClientView && <InterestRates />}
-
-            {/* APR Adjustments (Points & Credits) - hidden in client view */}
-            {!isClientView && <APRAdjustments />}
-
-            {/* Loan Type Selector - hidden in client view */}
+            {/* Mode Toggle - hidden in client view */}
             {!isClientView && (
-              <div className="py-4">
-                <LoanTypeSelector />
+              <div className="flex justify-center">
+                <div className="inline-flex rounded-lg p-1 bg-gray-200">
+                  <button
+                    onClick={() => setMode('purchase')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                      mode === 'purchase'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <HomeIcon className="w-4 h-4" />
+                    Purchase
+                  </button>
+                  <button
+                    onClick={() => setMode('refinance')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                      mode === 'refinance'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <ArrowPathIcon className="w-4 h-4" />
+                    Refinance
+                  </button>
+                </div>
               </div>
             )}
 
-            {/* Comparison Cards */}
-            <ComparisonGrid />
+            {/* Purchase Mode Content */}
+            {mode === 'purchase' && (
+              <>
+                {/* Client Name Input - hidden in client view */}
+                <ClientNameInput />
 
-            {/* AI Recommendations */}
-            <AIRecommendations />
+                {/* Loan Inputs - read-only display in client view */}
+                <LoanInputs />
 
-            {/* Total Cost Analysis (Buy vs Rent) */}
-            <TotalCostAnalysis />
+                {/* Interest Rates - hidden in client view */}
+                {!isClientView && <InterestRates />}
 
-            {/* Payment Analysis Charts */}
-            <PaymentCharts />
+                {/* APR Adjustments (Points & Credits) - hidden in client view */}
+                {!isClientView && <APRAdjustments />}
 
-            {/* Rate Change Simulator */}
-            <RateSimulator />
+                {/* Loan Type Selector - hidden in client view */}
+                {!isClientView && (
+                  <div className="py-4">
+                    <LoanTypeSelector />
+                  </div>
+                )}
 
-            {/* Closing Costs Breakdown */}
-            <ClosingCostsBreakdown />
+                {/* Comparison Cards */}
+                <ComparisonGrid />
 
-            {/* Amortization Schedule */}
-            <AmortizationSchedule />
+                {/* AI Recommendations */}
+                <AIRecommendations />
+
+                {/* Total Cost Analysis (Buy vs Rent) */}
+                <TotalCostAnalysis />
+
+                {/* Payment Analysis Charts */}
+                <PaymentCharts />
+
+                {/* Rate Change Simulator */}
+                <RateSimulator />
+
+                {/* Closing Costs Breakdown */}
+                <ClosingCostsBreakdown />
+
+                {/* Amortization Schedule */}
+                <AmortizationSchedule />
+              </>
+            )}
+
+            {/* Refinance Mode Content */}
+            {mode === 'refinance' && (
+              <RefinanceCalculator />
+            )}
 
             {/* Compliance Footer */}
             <div className="text-center text-xs text-gray-500 pt-8 pb-4 border-t border-gray-200 mt-8">
